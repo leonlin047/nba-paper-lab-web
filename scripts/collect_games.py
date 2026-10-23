@@ -58,6 +58,7 @@ if not games:
 # Never train on future results: ordered completed events only.
 elo={}
 predictions=[]
+walk_forward_scores=[]
 for g in games:
     h,a=g["home"],g["away"]
     ph=elo.get(h,1500);pa=elo.get(a,1500)
@@ -66,12 +67,13 @@ for g in games:
         predictions.append({"event_id":g["id"],"date":g["date"],"home":h,"away":a,"home_win_probability":round(p,4),"model":"elo_recent_experimental","validated":False})
     elif g["status"]=="post" and g["home_score"] is not None and g["away_score"] is not None:
         result=1 if g["home_score"]>g["away_score"] else 0
+        walk_forward_scores.append((p-result)**2)
         shift=20*(result-p)
         elo[h]=ph+shift;elo[a]=pa-shift
 # ESPN summary may include licensed/attributed market lines. Never infer missing prices.
 # This is source discovery only; publication requires rights review.
 odds_discovery=[]
-for g in [x for x in games if x["status"]=="pre"][:8]:
+for g in [x for x in games if x["status"]=="pre"][:28]:
     try:
         d=fetch("summary",{"event":g["id"]})
         for q in d.get("pickcenter",[]) or []:
@@ -155,6 +157,6 @@ now=dt.datetime.now(UTC).isoformat()
 snapshot={"odds_discovery":odds_discovery,"odds_observations":odds_observations,"normalized_markets":normalized_markets,"market_snapshots":market_snapshots,"captured_at":now,"source":"ESPN public scoreboard and summary endpoints","games":games,"details":details,"errors":errors}
 (ROOT/"games.json").write_text(json.dumps(snapshot,ensure_ascii=False,separators=(",",":"))+"\n")
 # model is NOT backtested and therefore has NO high/medium/low confidence classification.
-research={"version":"0.3","updated_at_utc":now,"validation":{"sample_size":0,"out_of_sample":False,"brier":None},"predictions":predictions,"odds_comparison":[],"odds_discovery_count":len(odds_discovery),"odds_observation_count":len(odds_observations),"normalized_market_count":len(normalized_markets),"market_snapshot_count":len(market_snapshots),"sources":[{"name":"ESPN scoreboard / summary","type":"賽事、近期完賽細節","status":"已取得快照","rights":"再發布條款待審核"},{"name":"ESPN 60-day Elo","type":"未驗證試驗預測","status":"已計算" if predictions else "無未開賽賽事","rights":"僅研究用途"},{"name":"台灣運彩","type":"台灣盤口","status":"尚無核准資料接口","rights":"未確認"},{"name":"The Odds API","type":"國際盤口","status":"需要 API 金鑰及授權","rights":"依服務條款"}]}
+research={"version":"0.3","updated_at_utc":now,"validation":{"sample_size":len(walk_forward_scores),"out_of_sample":False,"walk_forward_experimental":True,"brier":round(sum(walk_forward_scores)/len(walk_forward_scores),5) if walk_forward_scores else None,"notes":"僅以近期賽事按時間順序回放；未建立獨立長期測試集，不可作為正式回測"},"predictions":predictions,"odds_comparison":[],"odds_discovery_count":len(odds_discovery),"odds_observation_count":len(odds_observations),"normalized_market_count":len(normalized_markets),"market_snapshot_count":len(market_snapshots),"sources":[{"name":"ESPN scoreboard / summary","type":"賽事、近期完賽細節","status":"已取得快照","rights":"再發布條款待審核"},{"name":"ESPN 60-day Elo","type":"未驗證試驗預測","status":"已計算" if predictions else "無未開賽賽事","rights":"僅研究用途"},{"name":"台灣運彩","type":"台灣盤口","status":"尚無核准資料接口","rights":"未確認"},{"name":"The Odds API","type":"國際盤口","status":"需要 API 金鑰及授權","rights":"依服務條款"}]}
 (ROOT/"research.json").write_text(json.dumps(research,ensure_ascii=False,separators=(",",":"))+"\n")
 print("saved",len(games),"games",len(details),"details",len(predictions),"experimental forecasts; errors",len(errors))
