@@ -26,3 +26,9 @@ jobs:
             git pull --rebase
             git push
           fi
+      - name: Request Pages deployment after data refresh
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api -X POST "repos/${{ github.repository }}/dispatches" -f event_type=refresh-pages || true
