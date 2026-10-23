@@ -1,0 +1,26 @@
+name: Validate NBA published datasets
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'data/**'
+      - 'scripts/**'
+      - 'index.html'
+      - 'research-dashboard.js'
+      - 'game-details.js'
+      - '.github/workflows/validate.yml'
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate JSON and UI integration
+        run: python3 -m unittest discover -s tests -v
+      - name: Validate JavaScript syntax
+        run: |
+          node --check research-dashboard.js
+          node --check game-details.js
