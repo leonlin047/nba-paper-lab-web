@@ -47,7 +47,7 @@
        if(isTotal){
          const total=report&&report.markets?report.markets.total:null;
          const line=total?total.line:(market&&market.total?market.total.line:null);
-         const result=total?(home?null:select.value==="total_over"?total.over_probability_experimental:total.under_probability_experimental):null;
+         const result=total?(select.value==="total_over"?total.over_probability_experimental:total.under_probability_experimental):null;
          view.append(gauge(num(result)),elt("p","pl-muted",select.value==="total_over"?"大分機率（試驗估計）："+fmt(num(result)):"小分機率（試驗估計）："+fmt(num(result))));
          view.append(elt("p","pl-muted","觀測總分盤："+safe(line)));
          if(total&&typeof total.expected_total==="number")view.append(elt("p","pl-muted","近期攻守得分模型預估總分："+total.expected_total+" 分"));
@@ -87,6 +87,18 @@
      const observation=elt("p","pl-muted",report&&report.report_zh?report.report_zh:"報告尚未生成，請確認資料更新工作流程。");
      observation.style.cssText="font-size:14px;line-height:1.8;white-space:normal";
      reportBlock.append(observation);
+     if(report&&Array.isArray(report.related_reporting)&&report.related_reporting.length){
+       reportBlock.append(elt("p","pl-muted","關聯球隊近期新聞（非 X 即時貼文；不能據此認定先發）："));
+       for(const story of report.related_reporting){
+         if(!story||typeof story.url!=="string"||!story.url.startsWith("https://www.espn.com/"))continue;
+         const node=elt("p","pl-muted");
+         const link=elt("a","",story.title||"ESPN 新聞報導");
+         link.href=story.url;link.target="_blank";link.rel="noopener noreferrer";
+         link.style.cssText="color:#a6caff;text-decoration:underline";
+         node.append(link,elt("span",""," · "+time(story.published_at_utc)));
+         reportBlock.append(node);
+       }
+     }
      if(box.children.length===0)reportBlock.open=true;
      card.append(reportBlock);
      box.append(card);
@@ -99,7 +111,7 @@
    box.append(elt("p","pl-muted","下列為觀測到的國際盤口，不是台灣運彩報價；不同來源不得直接混用。"));
    for(const m of entries){
      const c=elt("article","pl-panel"),x=m.moneyline||{},s=m.spread||{};
-     c.append(elt("strong","",safe(m.away||"客隊")+" @ "+safe(m.home||"主隊")+" · "+safe(m.provider)));
+     c.append(elt("strong","",(window.NbaZh?window.NbaZh.teamShort(m.away):safe(m.away||"客隊"))+" 對 "+(window.NbaZh?window.NbaZh.teamShort(m.home):safe(m.home||"主隊"))+" · "+safe(m.provider)));
      c.append(elt("p","pl-muted","獨贏 主／客："+safe(x.home_american)+" / "+safe(x.away_american)+"（美式）"));
      c.append(elt("p","pl-muted","去水隱含機率 主／客："+fmt(num(x.home_no_vig_probability))+" / "+fmt(num(x.away_no_vig_probability))));
      c.append(elt("p","pl-muted","讓分："+safe(s.details)+" · 大小："+safe(m.total&&m.total.line)));
