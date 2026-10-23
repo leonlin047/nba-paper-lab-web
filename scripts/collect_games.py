@@ -67,6 +67,17 @@ for g in games:
         result=1 if g["home_score"]>g["away_score"] else 0
         shift=20*(result-p)
         elo[h]=ph+shift;elo[a]=pa-shift
+# ESPN summary may include licensed/attributed market lines. Never infer missing prices.
+# This is source discovery only; publication requires rights review.
+odds_discovery=[]
+for g in [x for x in games if x["status"]=="pre"][:8]:
+    try:
+        d=fetch("summary",{"event":g["id"]})
+        for q in d.get("pickcenter",[]) or []:
+            if not isinstance(q,dict):continue
+            provider=q.get("provider") or {}
+            odds_discovery.append({"event_id":g["id"],"provider":provider.get("name") if isinstance(provider,dict) else str(provider),"spread":q.get("spread"),"over_under":q.get("overUnder"),"details":q.get("details"),"home_moneyline":q.get("homeTeamOdds",{}).get("moneyLine") if isinstance(q.get("homeTeamOdds"),dict) else None,"away_moneyline":q.get("awayTeamOdds",{}).get("moneyLine") if isinstance(q.get("awayTeamOdds"),dict) else None,"captured_at_utc":dt.datetime.now(UTC).isoformat(),"rights_status":"review"})
+    except Exception as exc:errors.append("odds discovery "+g["id"]+": "+str(exc)[:80])
 # Add box scores for most recent final games, limiting provider load.
 finals=[g for g in games if g["status"]=="post" and g["date"] and g["date"][:10]>=str(today-dt.timedelta(days=3))]
 details=[]
@@ -89,9 +100,9 @@ for g in finals[-18:]:
         details.append({"event_id":g["id"],"boxscore":box,"quarter_scores":lines})
     except Exception as exc:errors.append("summary "+g["id"]+": "+str(exc)[:80])
 now=dt.datetime.now(UTC).isoformat()
-snapshot={"captured_at":now,"source":"ESPN public scoreboard and summary endpoints","games":games,"details":details,"errors":errors}
+snapshot={"odds_discovery":odds_discovery,"captured_at":now,"source":"ESPN public scoreboard and summary endpoints","games":games,"details":details,"errors":errors}
 (ROOT/"games.json").write_text(json.dumps(snapshot,ensure_ascii=False,separators=(",",":"))+"\n")
 # model is NOT backtested and therefore has NO high/medium/low confidence classification.
-research={"version":"0.2","updated_at_utc":now,"validation":{"sample_size":0,"out_of_sample":False,"brier":None},"predictions":predictions,"odds_comparison":[],"sources":[{"name":"ESPN scoreboard / summary","type":"賽事、近期完賽細節","status":"已取得快照","rights":"再發布條款待審核"},{"name":"ESPN 60-day Elo","type":"未驗證試驗預測","status":"已計算" if predictions else "無未開賽賽事","rights":"僅研究用途"},{"name":"台灣運彩","type":"台灣盤口","status":"尚無核准資料接口","rights":"未確認"},{"name":"The Odds API","type":"國際盤口","status":"需要 API 金鑰及授權","rights":"依服務條款"}]}
+research={"version":"0.2","updated_at_utc":now,"validation":{"sample_size":0,"out_of_sample":False,"brier":None},"predictions":predictions,"odds_comparison":[],"odds_discovery_count":len(odds_discovery),"sources":[{"name":"ESPN scoreboard / summary","type":"賽事、近期完賽細節","status":"已取得快照","rights":"再發布條款待審核"},{"name":"ESPN 60-day Elo","type":"未驗證試驗預測","status":"已計算" if predictions else "無未開賽賽事","rights":"僅研究用途"},{"name":"台灣運彩","type":"台灣盤口","status":"尚無核准資料接口","rights":"未確認"},{"name":"The Odds API","type":"國際盤口","status":"需要 API 金鑰及授權","rights":"依服務條款"}]}
 (ROOT/"research.json").write_text(json.dumps(research,ensure_ascii=False,separators=(",",":"))+"\n")
 print("saved",len(games),"games",len(details),"details",len(predictions),"experimental forecasts; errors",len(errors))
