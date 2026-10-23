@@ -12,6 +12,7 @@ on:
       - 'injuries.js'
       - 'news.js'
       - 'localization.js'
+      - 'localization-extra.js'
       - 'index.html'
       - '.github/workflows/game-details.yml'
   schedule:
@@ -40,6 +41,7 @@ jobs:
           node --check game-details.js
           node --check injuries.js
           node --check localization.js
+          node --check localization-extra.js
           node --check news.js
       - name: Commit verified snapshots
         run: |
