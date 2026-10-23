@@ -87,7 +87,7 @@ def model_total(future,completed,market_line):
 def summary(game,forecast,market,total):
     away,home=team(game["away"]),team(game["home"])
     p=forecast.get("home_win_probability")
-    start=f"{away}對{home}｜獨贏：近期Elo估主隊{pct(p)}、客隊{pct(1-p) if isinstance(p,(int,float)) else '—'}，僅屬試驗基準。"
+    start=f"{away}對{home}｜獨贏：十季Elo估主隊{pct(p)}、客隊{pct(1-p) if isinstance(p,(int,float)) else '—'}，僅屬試驗基準。"
     spread=market.get("spread") if market else None
     line=spread.get("home_line") if isinstance(spread,dict) else None
     cover=spread.get("home_cover_probability_experimental") if isinstance(spread,dict) else None
