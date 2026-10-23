@@ -169,10 +169,19 @@ if history_path.exists():
             historical=past_archive["games"]
     except (ValueError,OSError) as exc:
         errors.append("historical report input: "+type(exc).__name__)
-reports=build_reports(games,predictions,market_snapshots,now_reports,historical_games=historical)
+headlines=[]
+news_path=ROOT/"news.json"
+if news_path.exists():
+    try:
+        headline_file=json.loads(news_path.read_text())
+        if isinstance(headline_file.get("articles"),list):headlines=headline_file["articles"]
+    except (ValueError,OSError) as exc:
+        errors.append("news report input: "+type(exc).__name__)
+reports=build_reports(games,predictions,market_snapshots,now_reports,
+    historical_games=historical,articles=headlines)
 (ROOT/"reports.json").write_text(json.dumps({
     "version":"1.0","captured_at":now_reports,
-    "reports":reports,"generated":len(reports),"historical_games_available":len(historical),
+    "reports":reports,"generated":len(reports),"historical_games_available":len(historical),"news_items_available":len(headlines),
     "description":"獨贏／讓分／大小分三市場之試驗模型觀察；無資料時明示缺值",
     "market_data_rights":"來源資料授權待確認；僅展示自製分析"
 },ensure_ascii=False,separators=(",",":"))+"\n")
