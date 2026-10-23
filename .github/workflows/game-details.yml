@@ -1,6 +1,12 @@
 name: Refresh NBA game details and experimental forecasts
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/*.py'
+      - 'tests/*.py'
+      - '.github/workflows/game-details.yml'
   schedule:
     - cron: '27 * * * *'
 permissions:
@@ -11,7 +17,7 @@ concurrency:
 jobs:
   refresh:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - name: Fetch game details and pregame baseline
