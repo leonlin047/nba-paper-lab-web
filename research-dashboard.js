@@ -1,17 +1,101 @@
 "use strict";
-(()=>{const $=id=>document.getElementById(id);
-const root=$("research-terminal");if(!root)return;
-const status=(id,text)=>{const n=$(id);if(n)n.textContent=text};
-const safe=(v)=>v==null?"尚無資料":String(v);
-const make=(tag,cls,txt)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(txt!=null)n.textContent=String(txt);return n};
-const fmt=n=>typeof n==="number"&&Number.isFinite(n)?(n*100).toFixed(1)+"%":"—";
-const badge=(text)=>make("span","pl-tag",text);
-function riskFor(p,meta){if(typeof p!=="number"||p<0||p>1||!meta||meta.sample_size<200||meta.out_of_sample!==true||typeof meta.brier!=="number")return {name:"未評估",reason:"缺少足夠樣本外驗證資料"};if(meta.brier>0.25)return {name:"高",reason:"模型校準不足"};if(meta.sample_size<1000||meta.brier>0.23)return {name:"中",reason:"樣本量或校準仍有限"};return {name:"低（模型不確定性）",reason:"僅指模型驗證風險，不代表投注安全"}}
-function gauge(p){const wrap=make("div","pl-gauge");const needle=make("div","pl-needle");const label=make("div","pl-gauge-value",fmt(p));if(typeof p==="number"&&p>=0&&p<=1){needle.style.transform="translateX(-50%) rotate("+(-90+p*180)+"deg)"}else needle.style.display="none";wrap.append(needle,label);return wrap}
-function americanDecimal(v){const n=Number(v);return Number.isFinite(n)&&n!==0?(n>0?1+n/100:1+100/Math.abs(n)):null}
-function renderPrediction(rows,meta,odds){const box=$("pl-predictions");box.replaceChildren();if(!Array.isArray(rows)||!rows.length){box.append(gauge(null),make("p","pl-muted","目前尚無未開賽預測。"));return}const marketMap=new Map((odds||[]).map(x=>[String(x.event_id),x]));for(const g of rows){const card=make("article","pl-panel"),p=g.home_win_probability,r=riskFor(p,meta),q=marketMap.get(String(g.event_id));card.append(make("strong","",safe(g.away)+" @ "+safe(g.home)));const select=make("select");select.setAttribute("aria-label","盤口玩法");select.style.cssText="display:block;width:100%;margin:14px 0;padding:12px;background:#0b172a;color:white;border:1px solid #50688d;border-radius:10px";for(const [v,label] of [["ml_home","獨贏 · 主隊"],["ml_away","獨贏 · 客隊"],["spread_home","讓分／受讓 · 主隊"],["spread_away","讓分／受讓 · 客隊"]]){const o=make("option","",label);o.value=v;select.append(o)}const view=make("div");const refresh=()=>{view.replaceChildren();const mode=select.value,home=mode.endsWith("home"),spread=mode.startsWith("spread");const est=typeof p==="number"?(home?p:1-p):null;const hd=q?americanDecimal(q.home_moneyline):null,ad=q?americanDecimal(q.away_moneyline):null;const total=hd&&ad?1/hd+1/ad:null;const implied=total?((home?1/hd:1/ad)/total):null;if(spread){view.append(gauge(null),make("p","pl-muted","過盤勝率：—（尚無分差分布模型）"),make("p","pl-muted",q&&q.details?"已觀測讓分盤："+q.details:"讓分盤：未取得"),make("p","pl-muted","讓分方向依資料供應商原始標示；不能以獨贏率代替過盤率。"))}else{view.append(gauge(est),make("p","pl-muted","試驗 Elo 獨贏機率："+fmt(est)),make("p","pl-muted","市場去水後隱含機率："+fmt(implied)),make("p","pl-muted","市場美式賠率："+(q?safe(home?q.home_moneyline:q.away_moneyline):"—")))}if(q)view.append(make("p","pl-muted","盤口來源："+safe(q.provider)+" · 擷取："+safe(q.captured_at_utc)+" · 轉載權利待確認"));else view.append(make("p","pl-muted","本場目前沒有對應盤口快照"));view.append(badge("模型風險："+r.name),make("p","pl-muted",r.reason+"；尚未完成樣本外回測。"))};select.addEventListener("change",refresh);card.append(select,view);refresh();box.append(card)}}
-function renderOdds(rows){const box=$("pl-odds");box.replaceChildren();if(!Array.isArray(rows)||!rows.length){box.append(make("p","pl-muted","目前沒有取得可公開顯示的台灣／國際盤口快照。此處不以國際盤口冒充台灣盤口。"));return}for(const g of rows){const card=make("article","pl-panel");card.append(make("strong","",safe(g.event_id)+" · "+safe(g.market)),make("p","pl-muted","台灣："+safe(g.tw_bookmaker)+" "+safe(g.tw_decimal)+" ／ 國際："+safe(g.intl_bookmaker)+" "+safe(g.intl_decimal)),make("p","pl-muted","隱含機率差："+safe(g.implied_gap_pp)+" 個百分點 · 快照時間差："+safe(g.snapshot_gap_minutes)+" 分鐘"));box.append(card)}}
-function renderProvenance(d){const box=$("pl-sources");box.replaceChildren();for(const item of d.sources||[]){const card=make("div","pl-panel");card.append(make("strong","",safe(item.name)),make("p","pl-muted","類型："+safe(item.type)+" · 狀態："+safe(item.status)),make("p","pl-muted","授權："+safe(item.rights)));box.append(card)}}
-async function load(){status("pl-update","讀取中…");try{const r=await fetch("./data/research.json?v="+Date.now(),{cache:"no-store"});if(!r.ok)throw Error("HTTP "+r.status);const d=await r.json();const marketData=await fetch("./data/games.json?v="+Date.now(),{cache:"no-store"}).then(x=>x.ok?x.json():{}).catch(()=>({}));renderPrediction(d.predictions,d.validation,marketData.odds_discovery);renderOdds(d.odds_comparison);renderProvenance(d);status("pl-update","研究資料版本："+safe(d.version)+" · 更新："+safe(d.updated_at_utc));}catch(e){renderPrediction([],null);renderOdds([]);status("pl-update","研究資料尚未就緒："+e.message)}}
-$("pl-refresh").addEventListener("click",load);load();
+(()=>{
+ const $=id=>document.getElementById(id);
+ const root=$("research-terminal");if(!root)return;
+ const elt=(tag,cls,value)=>{const x=document.createElement(tag);if(cls)x.className=cls;if(value!==undefined&&value!==null)x.textContent=String(value);return x};
+ const fmt=n=>typeof n==="number"&&Number.isFinite(n)?(n*100).toFixed(1)+"%":"—";
+ const num=n=>typeof n==="number"&&Number.isFinite(n)?n:null;
+ const safe=v=>v===null||v===undefined?"—":String(v);
+ const time=t=>t?new Date(t).toLocaleString("zh-TW",{timeZone:"Asia/Taipei"}):"—";
+ const risk=meta=>meta&&meta.out_of_sample===true&&meta.sample_size>=200&&typeof meta.brier==="number"?"有樣本外檢驗":"尚未驗證";
+ function gauge(prob){
+   const wrap=elt("div","pl-gauge"),needle=elt("div","pl-needle"),label=elt("div","pl-gauge-value",fmt(prob));
+   if(num(prob)!==null&&prob>=0&&prob<=1)needle.style.transform="translateX(-50%) rotate("+(-90+prob*180)+"deg)";
+   else needle.style.display="none";
+   wrap.append(needle,label);return wrap;
+ }
+ function oldMarket(q,game,p){
+   if(!q)return null;
+   const decimal=x=>{const n=Number(x);return Number.isFinite(n)&&Math.abs(n)>=100?(n>0?1+n/100:1+100/Math.abs(n)):null};
+   const hd=decimal(q.home_moneyline),ad=decimal(q.away_moneyline),den=hd&&ad?1/hd+1/ad:null;
+   return {event_id:q.event_id,provider:q.provider,captured_at_utc:q.captured_at_utc,rights_status:q.rights_status,
+    moneyline:{home_american:q.home_moneyline,away_american:q.away_moneyline,home_decimal:hd,away_decimal:ad,home_no_vig_probability:den?(1/hd)/den:null,away_no_vig_probability:den?(1/ad)/den:null},
+    spread:{home_line:null,away_line:null,details:q.details,home_cover_probability_experimental:null,away_cover_probability_experimental:null},
+    total:{line:q.over_under}};
+ }
+ function predictions(rows,meta,markets,raw){
+   const box=$("pl-predictions");box.replaceChildren();
+   if(!Array.isArray(rows)||!rows.length){box.append(gauge(null),elt("p","pl-muted","暫無有效的賽前模型快照。"));return}
+   const byId=new Map((markets||[]).map(m=>[String(m.event_id),m]));
+   const older=new Map((raw||[]).map(m=>[String(m.event_id),m]));
+   for(const game of rows){
+     const market=byId.get(String(game.event_id))||oldMarket(older.get(String(game.event_id)),game,game.home_win_probability);
+     const card=elt("article","pl-panel"),select=elt("select");card.append(elt("strong","",safe(game.away)+" @ "+safe(game.home)));
+     const started=game.date?new Date(game.date).getTime()<=Date.now():false;
+     card.append(elt("p","pl-muted",(game.date?time(game.date)+" · ":"")+(started?"賽前舊快照（賽事可能已開打）":"賽前預測")));
+     select.style.cssText="display:block;width:100%;margin:12px 0;padding:12px;background:#0b172a;color:#fff;border:1px solid #526688;border-radius:10px";
+     select.setAttribute("aria-label","玩法與隊伍");
+     for(const [v,label] of [["ml_home","獨贏｜主隊"],["ml_away","獨贏｜客隊"],["spread_home","讓分／受讓｜主隊"],["spread_away","讓分／受讓｜客隊"]]){const o=elt("option","",label);o.value=v;select.append(o)}
+     const view=elt("div");
+     function repaint(){
+       view.replaceChildren();
+       const home=select.value.endsWith("home"),spread=select.value.startsWith("spread");
+       const elo=num(game.home_win_probability),est=elo===null?null:(home?elo:1-elo);
+       const m=market?market.moneyline:null,s=market?market.spread:null;
+       if(spread){
+         const line=s?(home?s.home_line:s.away_line):null;
+         const cover=s?(home?s.home_cover_probability_experimental:s.away_cover_probability_experimental):null;
+         view.append(gauge(num(cover)),elt("p","pl-muted","過盤機率（實驗模型）："+fmt(num(cover))));
+         view.append(elt("p","pl-muted","讓分／受讓線："+(line===null||line===undefined?"未確認":(line>0?"+":"")+line)));
+         if(s&&s.details)view.append(elt("p","pl-muted","來源盤口標示："+s.details));
+         if(s&&s.whole_point_push_possible)view.append(elt("p","pl-muted","整數盤可能走水：此連續近似模型未估計走水機率。"));
+         view.append(elt("p","pl-muted","固定分差標準差 12 分的常態近似，尚未依歷史數據校準或回測。"));
+       }else{
+         view.append(gauge(est),elt("p","pl-muted","Elo 試驗獨贏勝率："+fmt(est)));
+         const fair=m?(home?m.home_no_vig_probability:m.away_no_vig_probability):null;
+         const odds=m?(home?m.home_american:m.away_american):null;
+         view.append(elt("p","pl-muted","市場去水後隱含機率："+fmt(num(fair))));
+         view.append(elt("p","pl-muted","美式獨贏賠率："+safe(odds)));
+       }
+       view.append(elt("p","pl-muted",market?"觀測："+safe(market.provider)+" · "+time(market.captured_at_utc):"本場沒有對應的盤口觀測"));
+       const stale=market&&market.captured_at_utc&&(Date.now()-Date.parse(market.captured_at_utc)>2*3600000);
+       if(stale)view.append(elt("p","pl-muted","注意：盤口已超過兩小時，非即時盤。"));
+       view.append(elt("p","pl-muted","模型狀態："+risk(meta)+"；盤口資料授權尚待確認。僅供紙上研究，不代表實際可投注價格。"));
+     }
+     select.addEventListener("change",repaint);card.append(select,view);repaint();box.append(card);
+   }
+ }
+ function marketOverview(markets,raw){
+   const box=$("pl-odds");box.replaceChildren();
+   const entries=markets&&markets.length?markets:(raw||[]).map(x=>oldMarket(x));
+   if(!entries.length){box.append(elt("p","pl-muted","尚未取得可驗證的國際／台灣盤口。"));return}
+   box.append(elt("p","pl-muted","下列為觀測到的國際盤口，不是台灣運彩報價；不同來源不得直接混用。"));
+   for(const m of entries){
+     const c=elt("article","pl-panel"),x=m.moneyline||{},s=m.spread||{};
+     c.append(elt("strong","",safe(m.away||"客隊")+" @ "+safe(m.home||"主隊")+" · "+safe(m.provider)));
+     c.append(elt("p","pl-muted","獨贏 主／客："+safe(x.home_american)+" / "+safe(x.away_american)+"（美式）"));
+     c.append(elt("p","pl-muted","去水隱含機率 主／客："+fmt(num(x.home_no_vig_probability))+" / "+fmt(num(x.away_no_vig_probability))));
+     c.append(elt("p","pl-muted","讓分："+safe(s.details)+" · 大小："+safe(m.total&&m.total.line)));
+     c.append(elt("p","pl-muted","觀測時間："+time(m.captured_at_utc)));
+     box.append(c);
+   }
+ }
+ function sources(d,probe){
+   const box=$("pl-sources");box.replaceChildren();
+   for(const s of d.sources||[]){const c=elt("div","pl-panel");c.append(elt("strong","",safe(s.name)),elt("p","pl-muted","狀態："+safe(s.status)+" · 授權："+safe(s.rights)));box.append(c)}
+   if(probe){const c=elt("div","pl-panel");c.append(elt("strong","","玩運彩公開頁面連線檢查"),elt("p","pl-muted","頁面："+safe(probe.fetch_status)+" · 欄位："+(probe.has_market_headers?"可辨識":"未辨識")+" · 已驗證盤口筆數："+safe(probe.nba_market_rows_verified)),elt("p","pl-muted","連線成功不代表完成逐場抓取或獲授權再發布。"));box.append(c)}
+ }
+ async function json(url){const r=await fetch(url+"?v="+Date.now(),{cache:"no-store"});if(!r.ok)throw Error(url+" HTTP "+r.status);return r.json()}
+ async function load(){
+   $("pl-update").textContent="讀取盤口與預測快照…";
+   try{
+     const [d,g,p]=await Promise.all([json("./data/research.json"),json("./data/games.json"),json("./data/playsport_status.json").catch(()=>null)]);
+     predictions(d.predictions,d.validation,g.market_snapshots,g.odds_discovery);
+     marketOverview(g.market_snapshots,g.odds_discovery);
+     sources(d,p);
+     $("pl-update").textContent="資料版本："+safe(d.version)+" · 更新："+time(d.updated_at_utc);
+   }catch(e){$("pl-update").textContent="研究資料讀取失敗："+e.message;}
+ }
+ $("pl-refresh").addEventListener("click",load);
+ load();
 })();
