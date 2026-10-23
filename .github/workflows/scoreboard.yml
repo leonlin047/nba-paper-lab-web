@@ -11,24 +11,53 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
-      - name: Fetch public NBA scoreboard snapshot
+      - name: Collect NBA or ESPN scoreboard
         run: |
           mkdir -p data
           python3 - <<'PY'
-          import json,urllib.request,datetime,pathlib
-          url="https://cdn.nba.com/static/json/liveData/scoreboard/todaysScoreboard_00.json"
-          req=urllib.request.Request(url,headers={"User-Agent":"Mozilla/5.0 (compatible; research-dashboard/1.0)","Accept":"application/json"})
-          with urllib.request.urlopen(req,timeout=20) as response:
-              raw=response.read(2_000_001)
-          if len(raw)>2_000_000: raise ValueError("oversized response")
-          source=json.loads(raw)
-          games=[]
-          for g in source["scoreboard"]["games"]:
-              status=int(g["gameStatus"])
-              games.append({"home":g["homeTeam"]["teamTricode"],"away":g["awayTeam"]["teamTricode"],"status":{1:"未開賽",2:"進行中",3:"已結束"}.get(status,"未知"),"home_score":g["homeTeam"].get("score") if status in (2,3) else None,"away_score":g["awayTeam"].get("score") if status in (2,3) else None})
-          out={"captured_at":datetime.datetime.now(datetime.timezone.utc).isoformat(),"games":games,"source":"NBA public scoreboard CDN"}
-          pathlib.Path("data/scoreboard.json").write_text(json.dumps(out,ensure_ascii=False,separators=(",",":"))+"\n",encoding="utf-8")
-          print("Scoreboard games:",len(games))
+          import datetime,json,pathlib,urllib.request,urllib.error
+          dest=pathlib.Path("data/scoreboard.json")
+          headers={"User-Agent":"nba-paper-lab-research/1.0","Accept":"application/json"}
+          def get(url):
+              with urllib.request.urlopen(urllib.request.Request(url,headers=headers),timeout=20) as response:
+                  body=response.read(2_000_001)
+              if len(body)>2_000_000:raise ValueError("response too large")
+              return json.loads(body)
+          errors=[]
+          games=None
+          source=None
+          try:
+              raw=get("https://cdn.nba.com/static/json/liveData/scoreboard/todaysScoreboard_00.json")
+              games=[]
+              for g in raw["scoreboard"]["games"]:
+                  status=int(g["gameStatus"])
+                  games.append({"home":g["homeTeam"]["teamTricode"],"away":g["awayTeam"]["teamTricode"],"status":{1:"未開賽",2:"進行中",3:"已結束"}.get(status,"未知"),"home_score":g["homeTeam"].get("score") if status in (2,3) else None,"away_score":g["awayTeam"].get("score") if status in (2,3) else None})
+              source="NBA scoreboard CDN"
+          except (urllib.error.URLError,ValueError,KeyError,TypeError) as e:
+              errors.append("NBA "+type(e).__name__+": "+str(e)[:100])
+          if games is None:
+              try:
+                  raw=get("https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard")
+                  games=[]
+                  for event in raw["events"]:
+                      competition=event["competitions"][0]
+                      sides={x["homeAway"]:x for x in competition["competitors"]}
+                      home,away=sides["home"],sides["away"]
+                      state=event["status"]["type"]["state"]
+                      games.append({"home":home["team"]["abbreviation"],"away":away["team"]["abbreviation"],"status":{"pre":"未開賽","in":"進行中","post":"已結束"}.get(state,"未知"),"home_score":int(home["score"]) if state!="pre" and home.get("score") not in (None,"") else None,"away_score":int(away["score"]) if state!="pre" and away.get("score") not in (None,"") else None})
+                  source="ESPN scoreboard API"
+              except (urllib.error.URLError,ValueError,KeyError,TypeError,IndexError) as e:
+                  errors.append("ESPN "+type(e).__name__+": "+str(e)[:100])
+          if games is None:
+              print("Both scoreboard sources unavailable: "+" | ".join(errors))
+              if dest.exists():
+                  print("Preserving last successful snapshot")
+              else:
+                  print("No prior snapshot; frontend will show unavailable")
+          else:
+              snapshot={"captured_at":datetime.datetime.now(datetime.timezone.utc).isoformat(),"games":games,"source":source}
+              dest.write_text(json.dumps(snapshot,ensure_ascii=False,separators=(",",":"))+"\n",encoding="utf-8")
+              print("Saved",len(games),"games from",source)
           PY
       - name: Commit changed snapshot
         run: |
