@@ -1,0 +1,16 @@
+"use strict";
+(()=>{const $=id=>document.getElementById(id);
+const root=$("research-terminal");if(!root)return;
+const status=(id,text)=>{const n=$(id);if(n)n.textContent=text};
+const safe=(v)=>v==null?"尚無資料":String(v);
+const make=(tag,cls,txt)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(txt!=null)n.textContent=String(txt);return n};
+const fmt=n=>typeof n==="number"&&Number.isFinite(n)?(n*100).toFixed(1)+"%":"—";
+const badge=(text)=>make("span","pl-tag",text);
+function riskFor(p,meta){if(typeof p!=="number"||p<0||p>1||!meta||meta.sample_size<200||meta.out_of_sample!==true||typeof meta.brier!=="number")return {name:"未評估",reason:"缺少足夠樣本外驗證資料"};if(meta.brier>0.25)return {name:"高",reason:"模型校準不足"};if(meta.sample_size<1000||meta.brier>0.23)return {name:"中",reason:"樣本量或校準仍有限"};return {name:"低（模型不確定性）",reason:"僅指模型驗證風險，不代表投注安全"}}
+function gauge(p){const wrap=make("div","pl-gauge");const needle=make("div","pl-needle");const label=make("div","pl-gauge-value",fmt(p));if(typeof p==="number"&&p>=0&&p<=1){needle.style.transform="translateX(-50%) rotate("+(-90+p*180)+"deg)"}else needle.style.display="none";wrap.append(needle,label);return wrap}
+function renderPrediction(rows,meta){const box=$("pl-predictions");box.replaceChildren();if(!Array.isArray(rows)||!rows.length){box.append(gauge(null),make("p","pl-muted","尚未取得經過樣本外驗證的賽前模型機率；不顯示臆測勝率。"));return}for(const g of rows){const card=make("article","pl-panel"),p=g.home_win_probability,r=riskFor(p,meta);card.append(make("strong","",safe(g.away)+" @ "+safe(g.home)),gauge(p),make("p","pl-muted","主隊模型勝率："+fmt(p)),badge("風險："+r.name),make("p","pl-muted",r.reason));box.append(card)}}
+function renderOdds(rows){const box=$("pl-odds");box.replaceChildren();if(!Array.isArray(rows)||!rows.length){box.append(make("p","pl-muted","目前沒有取得可公開顯示的台灣／國際盤口快照。此處不以國際盤口冒充台灣盤口。"));return}for(const g of rows){const card=make("article","pl-panel");card.append(make("strong","",safe(g.event_id)+" · "+safe(g.market)),make("p","pl-muted","台灣："+safe(g.tw_bookmaker)+" "+safe(g.tw_decimal)+" ／ 國際："+safe(g.intl_bookmaker)+" "+safe(g.intl_decimal)),make("p","pl-muted","隱含機率差："+safe(g.implied_gap_pp)+" 個百分點 · 快照時間差："+safe(g.snapshot_gap_minutes)+" 分鐘"));box.append(card)}}
+function renderProvenance(d){const box=$("pl-sources");box.replaceChildren();for(const item of d.sources||[]){const card=make("div","pl-panel");card.append(make("strong","",safe(item.name)),make("p","pl-muted","類型："+safe(item.type)+" · 狀態："+safe(item.status)),make("p","pl-muted","授權："+safe(item.rights)));box.append(card)}}
+async function load(){status("pl-update","讀取中…");try{const r=await fetch("./data/research.json?v="+Date.now(),{cache:"no-store"});if(!r.ok)throw Error("HTTP "+r.status);const d=await r.json();renderPrediction(d.predictions,d.validation);renderOdds(d.odds_comparison);renderProvenance(d);status("pl-update","研究資料版本："+safe(d.version)+" · 更新："+safe(d.updated_at_utc));}catch(e){renderPrediction([],null);renderOdds([]);status("pl-update","研究資料尚未就緒："+e.message)}}
+$("pl-refresh").addEventListener("click",load);load();
+})();
