@@ -78,6 +78,31 @@ for g in [x for x in games if x["status"]=="pre"][:8]:
             provider=q.get("provider") or {}
             odds_discovery.append({"event_id":g["id"],"provider":provider.get("name") if isinstance(provider,dict) else str(provider),"spread":q.get("spread"),"over_under":q.get("overUnder"),"details":q.get("details"),"home_moneyline":q.get("homeTeamOdds",{}).get("moneyLine") if isinstance(q.get("homeTeamOdds"),dict) else None,"away_moneyline":q.get("awayTeamOdds",{}).get("moneyLine") if isinstance(q.get("awayTeamOdds"),dict) else None,"captured_at_utc":dt.datetime.now(UTC).isoformat(),"rights_status":"review"})
     except Exception as exc:errors.append("odds discovery "+g["id"]+": "+str(exc)[:80])
+# Public NBA odds endpoint: normalize observed markets only, never synthesize quotes.
+# Treat upstream rights as review until authorized for public redistribution.
+odds_observations=[]
+try:
+    with urllib.request.urlopen(urllib.request.Request(
+        "https://cdn.nba.com/static/json/liveData/odds/odds_todaysGames.json",headers=HEAD),timeout=15) as response:
+        raw=response.read(2500000)
+    odds_raw=json.loads(raw)
+    candidate=odds_raw.get("games",[])
+    if isinstance(candidate,dict):candidate=list(candidate.values())
+    for event in candidate:
+        if not isinstance(event,dict):continue
+        for market in event.get("markets",[]) or []:
+            if not isinstance(market,dict):continue
+            for book in market.get("books",[]) or []:
+                if not isinstance(book,dict):continue
+                for outcome in book.get("outcomes",[]) or []:
+                    if not isinstance(outcome,dict):continue
+                    try:
+                        price=float(outcome["odds"])
+                        if not (1<price<10000):continue
+                    except (ValueError,TypeError,KeyError):continue
+                    odds_observations.append({"nba_game_id":event.get("gameId"),"market":market.get("name"),"bookmaker":book.get("name"),"book_country":book.get("countryCode"),"selection":outcome.get("type"),"decimal_odds":price,"spread":outcome.get("spread"),"opening_odds":outcome.get("opening_odds"),"opening_spread":outcome.get("opening_spread"),"captured_at_utc":dt.datetime.now(UTC).isoformat(),"rights_status":"review"})
+except Exception as exc:
+    errors.append("NBA public odds endpoint: "+str(exc)[:110])
 # Add box scores for most recent final games, limiting provider load.
 finals=[g for g in games if g["status"]=="post" and g["date"] and g["date"][:10]>=str(today-dt.timedelta(days=3))]
 details=[]
@@ -100,9 +125,9 @@ for g in finals[-18:]:
         details.append({"event_id":g["id"],"boxscore":box,"quarter_scores":lines})
     except Exception as exc:errors.append("summary "+g["id"]+": "+str(exc)[:80])
 now=dt.datetime.now(UTC).isoformat()
-snapshot={"odds_discovery":odds_discovery,"captured_at":now,"source":"ESPN public scoreboard and summary endpoints","games":games,"details":details,"errors":errors}
+snapshot={"odds_discovery":odds_discovery,"odds_observations":odds_observations,"captured_at":now,"source":"ESPN public scoreboard and summary endpoints","games":games,"details":details,"errors":errors}
 (ROOT/"games.json").write_text(json.dumps(snapshot,ensure_ascii=False,separators=(",",":"))+"\n")
 # model is NOT backtested and therefore has NO high/medium/low confidence classification.
-research={"version":"0.2","updated_at_utc":now,"validation":{"sample_size":0,"out_of_sample":False,"brier":None},"predictions":predictions,"odds_comparison":[],"odds_discovery_count":len(odds_discovery),"sources":[{"name":"ESPN scoreboard / summary","type":"賽事、近期完賽細節","status":"已取得快照","rights":"再發布條款待審核"},{"name":"ESPN 60-day Elo","type":"未驗證試驗預測","status":"已計算" if predictions else "無未開賽賽事","rights":"僅研究用途"},{"name":"台灣運彩","type":"台灣盤口","status":"尚無核准資料接口","rights":"未確認"},{"name":"The Odds API","type":"國際盤口","status":"需要 API 金鑰及授權","rights":"依服務條款"}]}
+research={"version":"0.2","updated_at_utc":now,"validation":{"sample_size":0,"out_of_sample":False,"brier":None},"predictions":predictions,"odds_comparison":[],"odds_discovery_count":len(odds_discovery),"odds_observation_count":len(odds_observations),"sources":[{"name":"ESPN scoreboard / summary","type":"賽事、近期完賽細節","status":"已取得快照","rights":"再發布條款待審核"},{"name":"ESPN 60-day Elo","type":"未驗證試驗預測","status":"已計算" if predictions else "無未開賽賽事","rights":"僅研究用途"},{"name":"台灣運彩","type":"台灣盤口","status":"尚無核准資料接口","rights":"未確認"},{"name":"The Odds API","type":"國際盤口","status":"需要 API 金鑰及授權","rights":"依服務條款"}]}
 (ROOT/"research.json").write_text(json.dumps(research,ensure_ascii=False,separators=(",",":"))+"\n")
 print("saved",len(games),"games",len(details),"details",len(predictions),"experimental forecasts; errors",len(errors))
