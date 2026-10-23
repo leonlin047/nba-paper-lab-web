@@ -6,6 +6,13 @@ on:
     paths:
       - 'scripts/*.py'
       - 'tests/*.py'
+      - 'data/history_games.json'
+      - 'research-dashboard.js'
+      - 'game-details.js'
+      - 'injuries.js'
+      - 'news.js'
+      - 'localization.js'
+      - 'index.html'
       - '.github/workflows/game-details.yml'
   schedule:
     - cron: '27 * * * *'
@@ -20,6 +27,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+      - name: Fetch attributable news headlines (not X posts)
+        run: python3 scripts/collect_news.py
       - name: Fetch game details and pregame baseline
         run: python3 scripts/collect_games.py
       - name: Probe public Taiwan odds source availability
@@ -30,11 +39,13 @@ jobs:
           node --check research-dashboard.js
           node --check game-details.js
           node --check injuries.js
+          node --check localization.js
+          node --check news.js
       - name: Commit verified snapshots
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/games.json data/research.json data/playsport_status.json data/injuries.json
+          git add data/games.json data/research.json data/playsport_status.json data/injuries.json data/reports.json data/news.json
           if ! git diff --cached --quiet; then
             git commit -m "data: refresh NBA game details and experimental forecasts"
             git pull --rebase
