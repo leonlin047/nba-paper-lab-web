@@ -9,6 +9,9 @@ on:
       - 'index.html'
       - 'research-dashboard.js'
       - 'game-details.js'
+      - 'news.js'
+      - 'localization.js'
+      - 'injuries.js'
       - '.github/workflows/validate.yml'
 permissions:
   contents: read
@@ -24,3 +27,6 @@ jobs:
         run: |
           node --check research-dashboard.js
           node --check game-details.js
+          node --check injuries.js
+          node --check news.js
+          node --check localization.js
