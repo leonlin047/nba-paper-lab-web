@@ -16,11 +16,18 @@ jobs:
       - uses: actions/checkout@v4
       - name: Fetch game details and pregame baseline
         run: python3 scripts/collect_games.py
+      - name: Probe public Taiwan odds source availability
+        run: python3 scripts/playsport_probe.py
+      - name: Validate datasets and UI syntax
+        run: |
+          python3 -m unittest discover -s tests -v
+          node --check research-dashboard.js
+          node --check game-details.js
       - name: Commit verified snapshots
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/games.json data/research.json
+          git add data/games.json data/research.json data/playsport_status.json
           if ! git diff --cached --quiet; then
             git commit -m "data: refresh NBA game details and experimental forecasts"
             git pull --rebase
