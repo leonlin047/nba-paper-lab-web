@@ -29,11 +29,12 @@ jobs:
           python3 -m unittest discover -s tests -v
           node --check research-dashboard.js
           node --check game-details.js
+          node --check injuries.js
       - name: Commit verified snapshots
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/games.json data/research.json data/playsport_status.json
+          git add data/games.json data/research.json data/playsport_status.json data/injuries.json
           if ! git diff --cached --quiet; then
             git commit -m "data: refresh NBA game details and experimental forecasts"
             git pull --rebase
