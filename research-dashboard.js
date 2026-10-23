@@ -7,7 +7,7 @@
  const num=n=>typeof n==="number"&&Number.isFinite(n)?n:null;
  const safe=v=>v===null||v===undefined?"—":String(v);
  const time=t=>t?new Date(t).toLocaleString("zh-TW",{timeZone:"Asia/Taipei"}):"—";
- const risk=meta=>meta&&meta.out_of_sample===true&&meta.sample_size>=200&&typeof meta.brier==="number"?"有樣本外檢驗":"尚未驗證";
+ const risk=meta=>meta&&meta.out_of_sample===true&&meta.sample_size>=200&&typeof meta.brier==="number"?"十季 Elo 獨贏已完成時序驗證":"獨贏模型尚未完成足夠時序驗證";
  function gauge(prob){
    const wrap=elt("div","pl-gauge"),needle=elt("div","pl-needle"),label=elt("div","pl-gauge-value",fmt(prob));
    if(num(prob)!==null&&prob>=0&&prob<=1)needle.style.transform="translateX(-50%) rotate("+(-90+prob*180)+"deg)";
@@ -72,7 +72,7 @@
        view.append(elt("p","pl-muted",market?"觀測："+safe(market.provider)+" · "+time(market.captured_at_utc):"本場沒有對應的盤口觀測"));
        const stale=market&&market.captured_at_utc&&(Date.now()-Date.parse(market.captured_at_utc)>2*3600000);
        if(stale)view.append(elt("p","pl-muted","注意：盤口已超過兩小時，非即時盤。"));
-       view.append(elt("p","pl-muted","模型狀態："+risk(meta)+"；盤口資料授權尚待確認。僅供紙上研究，不代表實際可投注價格。"));
+       view.append(elt("p","pl-muted","模型狀態："+risk(meta)+"；讓分及大小分模型尚未完成校準／獨立驗證。盤口資料授權尚待確認，僅供紙上研究。"));
      }
      select.addEventListener("change",repaint);card.append(select,view);repaint();
      const overview=elt("p","pl-muted");
@@ -132,6 +132,7 @@
      predictions(d.predictions,d.validation,g.market_snapshots,g.odds_discovery,reportsData&&reportsData.reports);
      if($("model-sample"))$("model-sample").textContent=safe(d.validation&&d.validation.sample_size);
      if($("model-brier"))$("model-brier").textContent=num(d.validation&&d.validation.brier)!==null?d.validation.brier.toFixed(4):"—";
+     if($("model-logloss"))$("model-logloss").textContent=num(d.validation&&d.validation.log_loss)!==null?d.validation.log_loss.toFixed(4):"—";
      marketOverview(g.market_snapshots,g.odds_discovery);
      sources(d,p);
      $("pl-update").textContent="資料版本："+safe(d.version)+" · 更新："+time(d.updated_at_utc);
