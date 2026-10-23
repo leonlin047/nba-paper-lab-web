@@ -160,10 +160,19 @@ snapshot={"odds_discovery":odds_discovery,"odds_observations":odds_observations,
 # Generate one 100–200 character three-market Chinese report per future game.
 # Keep reports separate from source price snapshots for provenance and auditing.
 now_reports=dt.datetime.now(UTC).isoformat()
-reports=build_reports(games,predictions,market_snapshots,now_reports)
+historical=[]
+history_path=ROOT/"history_games.json"
+if history_path.exists():
+    try:
+        past_archive=json.loads(history_path.read_text())
+        if isinstance(past_archive.get("games"),list):
+            historical=past_archive["games"]
+    except (ValueError,OSError) as exc:
+        errors.append("historical report input: "+type(exc).__name__)
+reports=build_reports(games,predictions,market_snapshots,now_reports,historical_games=historical)
 (ROOT/"reports.json").write_text(json.dumps({
     "version":"1.0","captured_at":now_reports,
-    "reports":reports,"generated":len(reports),
+    "reports":reports,"generated":len(reports),"historical_games_available":len(historical),
     "description":"獨贏／讓分／大小分三市場之試驗模型觀察；無資料時明示缺值",
     "market_data_rights":"來源資料授權待確認；僅展示自製分析"
 },ensure_ascii=False,separators=(",",":"))+"\n")
