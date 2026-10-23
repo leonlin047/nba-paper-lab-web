@@ -19,6 +19,8 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+      - name: Test ESPN event shape before history fetch
+        run: python3 -m unittest discover -s tests -v
       - name: Fetch ten-season regular and postseason game results
         env:
           NBA_HISTORY_BATCH_SOURCES: '650'
@@ -30,7 +32,9 @@ jobs:
           import json
           d=json.load(open('data/history_status.json'))
           assert 2017 in d['years'] and 2026 in d['years']
-          assert d['game_count'] >= 0
+          if d['complete']:
+              assert d['game_count'] >= 6000
+          assert not (d['complete'] and d['game_count'] == 0), 'zero-game archive falsely complete'
           print('History coverage:',d['game_count'],'completed source requests',len(d['completed_sources']), '/',d['expected_sources'])
           PY
       - name: Publish history results and coverage status
