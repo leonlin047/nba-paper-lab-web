@@ -3,6 +3,7 @@
 Research snapshots only. Respect provider terms; no access-control bypass.
 """
 import datetime as dt, json, pathlib, time, urllib.request, urllib.parse
+from market_model import build_market
 UTC=dt.timezone.utc
 ROOT=pathlib.Path("data")
 ROOT.mkdir(exist_ok=True)
@@ -120,6 +121,15 @@ for q in odds_discovery:
         normalized_markets.append({"event_id":q["event_id"],"provider":q.get("provider"),"market":"moneyline","home_decimal":h,"away_decimal":a,"home_market_probability":round(ih/(ih+ia),5),"away_market_probability":round(ia/(ih+ia),5),"overround":round(ih+ia-1,5),"captured_at_utc":q.get("captured_at_utc"),"rights_status":"review"})
     if isinstance(q.get("spread"),(int,float)):
         normalized_markets.append({"event_id":q["event_id"],"provider":q.get("provider"),"market":"spread","spread_raw":q["spread"],"details":q.get("details"),"over_under":q.get("over_under"),"home_cover_probability":None,"away_cover_probability":None,"captured_at_utc":q.get("captured_at_utc"),"rights_status":"review"})
+# Join traceable public market observations by ESPN ID.
+by_id={str(g["id"]):g for g in games}
+forecast_by_id={str(p["event_id"]):p for p in predictions}
+market_snapshots=[]
+for q in odds_discovery:
+    event_id=str(q.get("event_id") or "")
+    if event_id not in by_id:continue
+    market_snapshots.append(build_market(q,by_id[event_id],forecast_by_id.get(event_id)))
+market_snapshots=list({(m["event_id"],m["provider"]):m for m in market_snapshots}.values())
 # Add box scores for most recent final games, limiting provider load.
 finals=[g for g in games if g["status"]=="post" and g["date"] and g["date"][:10]>=str(today-dt.timedelta(days=3))]
 details=[]
@@ -142,9 +152,9 @@ for g in finals[-18:]:
         details.append({"event_id":g["id"],"boxscore":box,"quarter_scores":lines})
     except Exception as exc:errors.append("summary "+g["id"]+": "+str(exc)[:80])
 now=dt.datetime.now(UTC).isoformat()
-snapshot={"odds_discovery":odds_discovery,"odds_observations":odds_observations,"normalized_markets":normalized_markets,"captured_at":now,"source":"ESPN public scoreboard and summary endpoints","games":games,"details":details,"errors":errors}
+snapshot={"odds_discovery":odds_discovery,"odds_observations":odds_observations,"normalized_markets":normalized_markets,"market_snapshots":market_snapshots,"captured_at":now,"source":"ESPN public scoreboard and summary endpoints","games":games,"details":details,"errors":errors}
 (ROOT/"games.json").write_text(json.dumps(snapshot,ensure_ascii=False,separators=(",",":"))+"\n")
 # model is NOT backtested and therefore has NO high/medium/low confidence classification.
-research={"version":"0.2","updated_at_utc":now,"validation":{"sample_size":0,"out_of_sample":False,"brier":None},"predictions":predictions,"odds_comparison":[],"odds_discovery_count":len(odds_discovery),"odds_observation_count":len(odds_observations),"normalized_market_count":len(normalized_markets),"sources":[{"name":"ESPN scoreboard / summary","type":"賽事、近期完賽細節","status":"已取得快照","rights":"再發布條款待審核"},{"name":"ESPN 60-day Elo","type":"未驗證試驗預測","status":"已計算" if predictions else "無未開賽賽事","rights":"僅研究用途"},{"name":"台灣運彩","type":"台灣盤口","status":"尚無核准資料接口","rights":"未確認"},{"name":"The Odds API","type":"國際盤口","status":"需要 API 金鑰及授權","rights":"依服務條款"}]}
+research={"version":"0.3","updated_at_utc":now,"validation":{"sample_size":0,"out_of_sample":False,"brier":None},"predictions":predictions,"odds_comparison":[],"odds_discovery_count":len(odds_discovery),"odds_observation_count":len(odds_observations),"normalized_market_count":len(normalized_markets),"market_snapshot_count":len(market_snapshots),"sources":[{"name":"ESPN scoreboard / summary","type":"賽事、近期完賽細節","status":"已取得快照","rights":"再發布條款待審核"},{"name":"ESPN 60-day Elo","type":"未驗證試驗預測","status":"已計算" if predictions else "無未開賽賽事","rights":"僅研究用途"},{"name":"台灣運彩","type":"台灣盤口","status":"尚無核准資料接口","rights":"未確認"},{"name":"The Odds API","type":"國際盤口","status":"需要 API 金鑰及授權","rights":"依服務條款"}]}
 (ROOT/"research.json").write_text(json.dumps(research,ensure_ascii=False,separators=(",",":"))+"\n")
 print("saved",len(games),"games",len(details),"details",len(predictions),"experimental forecasts; errors",len(errors))
