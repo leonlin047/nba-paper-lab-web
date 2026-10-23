@@ -1,0 +1,175 @@
+{
+  "updated_at_utc": "2026-10-24T00:00:00Z",
+  "description": "NBA 官方公告、具署名記者及分析帳號觀察名單；僅提供來源連結，不代表已自動擷取 X 貼文。",
+  "x_ingestion_status": "not_connected_requires_authorized_x_api",
+  "sources": [
+    {
+      "name_zh": "NBA 官方公關",
+      "name": "NBA Communications",
+      "handle": "NBAPR",
+      "url": "https://x.com/NBAPR",
+      "type": "official",
+      "priority": "critical",
+      "topics": [
+        "傷病",
+        "交易",
+        "聯盟公告"
+      ],
+      "reliability": "第一手官方"
+    },
+    {
+      "name_zh": "NBA 官方傷病報告",
+      "name": "NBA Official Injury Report",
+      "handle": null,
+      "url": "https://official.nba.com/nba-injury-report-2026-27-season/",
+      "type": "official",
+      "priority": "critical",
+      "topics": [
+        "出賽",
+        "傷病"
+      ],
+      "reliability": "聯盟官方"
+    },
+    {
+      "name_zh": "夏姆斯・查拉尼亞",
+      "name": "Shams Charania",
+      "handle": "ShamsCharania",
+      "url": "https://x.com/ShamsCharania",
+      "type": "national_insider",
+      "priority": "high",
+      "topics": [
+        "傷病",
+        "交易",
+        "先發狀態"
+      ],
+      "reliability": "ESPN 資深 NBA 記者"
+    },
+    {
+      "name_zh": "馬克・史坦",
+      "name": "Marc Stein",
+      "handle": "TheSteinLine",
+      "url": "https://x.com/TheSteinLine",
+      "type": "national_insider",
+      "priority": "high",
+      "topics": [
+        "交易",
+        "球隊動態",
+        "陣容"
+      ],
+      "reliability": "資深 NBA 記者"
+    },
+    {
+      "name_zh": "傑克・費雪",
+      "name": "Jake Fischer",
+      "handle": "JakeLFischer",
+      "url": "https://x.com/JakeLFischer",
+      "type": "national_insider",
+      "priority": "high",
+      "topics": [
+        "交易",
+        "球員動向",
+        "球隊消息"
+      ],
+      "reliability": "The Stein Line / Bleacher Report"
+    },
+    {
+      "name_zh": "布萊恩・溫德霍斯特",
+      "name": "Brian Windhorst",
+      "handle": "WindhorstESPN",
+      "url": "https://x.com/WindhorstESPN",
+      "type": "national_analyst",
+      "priority": "medium",
+      "topics": [
+        "球隊分析",
+        "聯盟消息"
+      ],
+      "reliability": "ESPN"
+    },
+    {
+      "name_zh": "戴夫・麥克梅納明",
+      "name": "Dave McMenamin",
+      "handle": "mcten",
+      "url": "https://x.com/mcten",
+      "type": "beat_reporter",
+      "teams": [
+        "LAL"
+      ],
+      "priority": "high",
+      "topics": [
+        "湖人",
+        "傷病",
+        "先發"
+      ],
+      "reliability": "ESPN"
+    },
+    {
+      "name_zh": "安東尼・斯萊特",
+      "name": "Anthony Slater",
+      "handle": "anthonyVslater",
+      "url": "https://x.com/anthonyVslater",
+      "type": "beat_reporter",
+      "teams": [
+        "GS",
+        "GSW"
+      ],
+      "priority": "high",
+      "topics": [
+        "勇士",
+        "先發",
+        "傷病"
+      ],
+      "reliability": "ESPN"
+    },
+    {
+      "name_zh": "伊恩・貝格利",
+      "name": "Ian Begley",
+      "handle": "IanBegley",
+      "url": "https://x.com/IanBegley",
+      "type": "beat_reporter",
+      "teams": [
+        "NY",
+        "NYK",
+        "BKN"
+      ],
+      "priority": "high",
+      "topics": [
+        "尼克",
+        "籃網",
+        "傷病"
+      ],
+      "reliability": "SNY"
+    },
+    {
+      "name_zh": "曼菲斯灰熊公關",
+      "name": "Grizzlies PR",
+      "handle": "GrizzliesPR",
+      "url": "https://x.com/GrizzliesPR",
+      "type": "team_official",
+      "teams": [
+        "MEM"
+      ],
+      "priority": "high",
+      "topics": [
+        "球隊官方",
+        "陣容"
+      ],
+      "reliability": "官方球隊公關"
+    },
+    {
+      "name_zh": "達拉斯獨行俠公關",
+      "name": "Mavs PR",
+      "handle": "MavsPR",
+      "url": "https://x.com/MavsPR",
+      "type": "team_official",
+      "teams": [
+        "DAL"
+      ],
+      "priority": "high",
+      "topics": [
+        "球隊官方",
+        "陣容"
+      ],
+      "reliability": "官方球隊公關"
+    }
+  ]
+}
