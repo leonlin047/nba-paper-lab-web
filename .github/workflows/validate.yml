@@ -11,6 +11,7 @@ on:
       - 'game-details.js'
       - 'news.js'
       - 'localization.js'
+      - 'localization-extra.js'
       - 'injuries.js'
       - '.github/workflows/validate.yml'
 permissions:
@@ -30,3 +31,4 @@ jobs:
           node --check injuries.js
           node --check news.js
           node --check localization.js
+          node --check localization-extra.js
