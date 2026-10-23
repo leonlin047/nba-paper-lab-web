@@ -91,6 +91,8 @@
    try{
      const [d,g,p]=await Promise.all([json("./data/research.json"),json("./data/games.json"),json("./data/playsport_status.json").catch(()=>null)]);
      predictions(d.predictions,d.validation,g.market_snapshots,g.odds_discovery);
+     if($("model-sample"))$("model-sample").textContent=safe(d.validation&&d.validation.sample_size);
+     if($("model-brier"))$("model-brier").textContent=num(d.validation&&d.validation.brier)!==null?d.validation.brier.toFixed(4):"—";
      marketOverview(g.market_snapshots,g.odds_discovery);
      sources(d,p);
      $("pl-update").textContent="資料版本："+safe(d.version)+" · 更新："+time(d.updated_at_utc);
