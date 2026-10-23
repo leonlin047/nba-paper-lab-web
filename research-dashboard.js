@@ -23,26 +23,38 @@
     spread:{home_line:null,away_line:null,details:q.details,home_cover_probability_experimental:null,away_cover_probability_experimental:null},
     total:{line:q.over_under}};
  }
- function predictions(rows,meta,markets,raw){
+ function predictions(rows,meta,markets,raw,reports){
    const box=$("pl-predictions");box.replaceChildren();
    if(!Array.isArray(rows)||!rows.length){box.append(gauge(null),elt("p","pl-muted","暫無有效的賽前模型快照。"));return}
    const byId=new Map((markets||[]).map(m=>[String(m.event_id),m]));
+   const byReport=new Map((reports||[]).map(m=>[String(m.event_id),m]));
    const older=new Map((raw||[]).map(m=>[String(m.event_id),m]));
    for(const game of rows){
      const market=byId.get(String(game.event_id))||oldMarket(older.get(String(game.event_id)),game,game.home_win_probability);
-     const card=elt("article","pl-panel"),select=elt("select");card.append(elt("strong","",safe(game.away)+" @ "+safe(game.home)));
+     const report=byReport.get(String(game.event_id));
+     const card=elt("article","pl-panel"),select=elt("select");card.append(elt("strong","",(window.NbaZh?window.NbaZh.teamShort(game.away):safe(game.away))+" 對 "+(window.NbaZh?window.NbaZh.teamShort(game.home):safe(game.home))));
      const started=game.date?new Date(game.date).getTime()<=Date.now():false;
      card.append(elt("p","pl-muted",(game.date?time(game.date)+" · ":"")+(started?"賽前舊快照（賽事可能已開打）":"賽前預測")));
      select.style.cssText="display:block;width:100%;margin:12px 0;padding:12px;background:#0b172a;color:#fff;border:1px solid #526688;border-radius:10px";
      select.setAttribute("aria-label","玩法與隊伍");
-     for(const [v,label] of [["ml_home","獨贏｜主隊"],["ml_away","獨贏｜客隊"],["spread_home","讓分／受讓｜主隊"],["spread_away","讓分／受讓｜客隊"]]){const o=elt("option","",label);o.value=v;select.append(o)}
+     for(const [v,label] of [["ml_home","獨贏｜主隊"],["ml_away","獨贏｜客隊"],["spread_home","讓分／受讓｜主隊"],["spread_away","讓分／受讓｜客隊"],["total_over","大小分｜大分"],["total_under","大小分｜小分"]]){const o=elt("option","",label);o.value=v;select.append(o)}
      const view=elt("div");
      function repaint(){
        view.replaceChildren();
-       const home=select.value.endsWith("home"),spread=select.value.startsWith("spread");
+       const home=select.value.endsWith("home"),spread=select.value.startsWith("spread"),isTotal=select.value.startsWith("total");
        const elo=num(game.home_win_probability),est=elo===null?null:(home?elo:1-elo);
        const m=market?market.moneyline:null,s=market?market.spread:null;
-       if(spread){
+       if(isTotal){
+         const total=report&&report.markets?report.markets.total:null;
+         const line=total?total.line:(market&&market.total?market.total.line:null);
+         const result=total?(home?null:select.value==="total_over"?total.over_probability_experimental:total.under_probability_experimental):null;
+         view.append(gauge(num(result)),elt("p","pl-muted",select.value==="total_over"?"大分機率（試驗估計）："+fmt(num(result)):"小分機率（試驗估計）："+fmt(num(result))));
+         view.append(elt("p","pl-muted","觀測總分盤："+safe(line)));
+         if(total&&typeof total.expected_total==="number")view.append(elt("p","pl-muted","近期攻守得分模型預估總分："+total.expected_total+" 分"));
+         else view.append(elt("p","pl-muted","得分樣本不足或未取得，不能提供可靠估計。"));
+         if(total&&total.whole_point_push_possible)view.append(elt("p","pl-muted","整數盤可能走水，未估計走水機率。"));
+         view.append(elt("p","pl-muted","近期攻守得分與分差波動模型尚未完整回測，切勿把估計視為確定結果。"));
+       }else if(spread){
          const line=s?(home?s.home_line:s.away_line):null;
          const cover=s?(home?s.home_cover_probability_experimental:s.away_cover_probability_experimental):null;
          view.append(gauge(num(cover)),elt("p","pl-muted","過盤機率（實驗模型）："+fmt(num(cover))));
@@ -62,7 +74,22 @@
        if(stale)view.append(elt("p","pl-muted","注意：盤口已超過兩小時，非即時盤。"));
        view.append(elt("p","pl-muted","模型狀態："+risk(meta)+"；盤口資料授權尚待確認。僅供紙上研究，不代表實際可投注價格。"));
      }
-     select.addEventListener("change",repaint);card.append(select,view);repaint();box.append(card);
+     select.addEventListener("change",repaint);card.append(select,view);repaint();
+     const overview=elt("p","pl-muted");
+     const homeProb=game.home_win_probability;
+     const cover=market&&market.spread?market.spread.home_cover_probability_experimental:null;
+     const total=report&&report.markets?report.markets.total:null;
+     overview.textContent="三市場總覽 · 主隊獨贏 "+fmt(num(homeProb))+"｜主隊過盤 "+fmt(num(cover))+"｜大分 "+fmt(num(total&&total.over_probability_experimental));
+     card.append(overview);
+     const reportBlock=elt("details");
+     reportBlock.style.cssText="padding-top:10px;border-top:1px solid #42536a;margin-top:10px";
+     reportBlock.append(elt("summary","","中文三市場觀察報告（100–200 字）"));
+     const observation=elt("p","pl-muted",report&&report.report_zh?report.report_zh:"報告尚未生成，請確認資料更新工作流程。");
+     observation.style.cssText="font-size:14px;line-height:1.8;white-space:normal";
+     reportBlock.append(observation);
+     if(box.children.length===0)reportBlock.open=true;
+     card.append(reportBlock);
+     box.append(card);
    }
  }
  function marketOverview(markets,raw){
@@ -89,8 +116,8 @@
  async function load(){
    $("pl-update").textContent="讀取盤口與預測快照…";
    try{
-     const [d,g,p]=await Promise.all([json("./data/research.json"),json("./data/games.json"),json("./data/playsport_status.json").catch(()=>null)]);
-     predictions(d.predictions,d.validation,g.market_snapshots,g.odds_discovery);
+     const [d,g,p,reportsData]=await Promise.all([json("./data/research.json"),json("./data/games.json"),json("./data/playsport_status.json").catch(()=>null),json("./data/reports.json").catch(()=>null)]);
+     predictions(d.predictions,d.validation,g.market_snapshots,g.odds_discovery,reportsData&&reportsData.reports);
      if($("model-sample"))$("model-sample").textContent=safe(d.validation&&d.validation.sample_size);
      if($("model-brier"))$("model-brier").textContent=num(d.validation&&d.validation.brier)!==null?d.validation.brier.toFixed(4):"—";
      marketOverview(g.market_snapshots,g.odds_discovery);
