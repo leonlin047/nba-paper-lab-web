@@ -122,7 +122,9 @@
  function sources(d,probe){
    const box=$("pl-sources");box.replaceChildren();
    for(const s of d.sources||[]){const c=elt("div","pl-panel");c.append(elt("strong","",safe(s.name)),elt("p","pl-muted","狀態："+safe(s.status)+" · 授權："+safe(s.rights)));box.append(c)}
-   if(probe){const c=elt("div","pl-panel");c.append(elt("strong","","玩運彩公開頁面連線檢查"),elt("p","pl-muted","頁面："+safe(probe.fetch_status)+" · 欄位："+(probe.has_market_headers?"可辨識":"未辨識")+" · 已驗證盤口筆數："+safe(probe.nba_market_rows_verified)),elt("p","pl-muted","連線成功不代表完成逐場抓取或獲授權再發布。"));box.append(c)}
+   // Playsport availability probe remains in the repository for audit,
+   // but is not a sportsbook data input and must not be portrayed as one.
+   // Public attribution is shown for sources actually used in forecasts.
  }
  async function json(url){const r=await fetch(url+"?v="+Date.now(),{cache:"no-store"});if(!r.ok)throw Error(url+" HTTP "+r.status);return r.json()}
  async function load(){
