@@ -47,7 +47,7 @@ def model_total(future,completed,market_line):
     kickoff=iso(future.get("date"))
     if kickoff is None:return None
     prior=[g for g in completed
-        if iso(g.get("date")) is not None and iso(g["date"])<kickoff
+        if iso(g.get("date")) is not None and kickoff-dt.timedelta(days=365)<=iso(g["date"])<kickoff
         and isinstance(g.get("home_score"),int) and isinstance(g.get("away_score"),int)
         and 50<=g["home_score"]<=200 and 50<=g["away_score"]<=200
         and g["home"]!=g["away"]]
@@ -115,9 +115,18 @@ def summary(game,forecast,market,total):
         raise ValueError(f"Report length invalid {len(report)} for {game.get('id')}: {report}")
     return report
 
-def build_reports(games,predictions,markets,now):
+def build_reports(games,predictions,markets,now,historical_games=None):
     finals=[g for g in games if g.get("status")=="post"
         and isinstance(g.get("home_score"),int) and isinstance(g.get("away_score"),int)]
+    # Historical outcomes are permitted only when genuinely scored and dated.
+    # The model_total routine rejects games on/after the prediction's tip-off.
+    for old in historical_games or []:
+        if (old.get("id") and old.get("date")
+            and isinstance(old.get("home_score"),int)
+            and isinstance(old.get("away_score"),int)
+            and old.get("home") and old.get("away")):
+            finals.append(old)
+    finals=list({str(g["id"]):g for g in finals}.values())
     by_id={str(m.get("event_id")):m for m in markets}
     future={str(g["id"]):g for g in games if g.get("status")=="pre"}
     out=[]
