@@ -64,8 +64,15 @@ def game(e,season,phase):
         comp=e["competitions"][0]
         sides={c["homeAway"]:c for c in comp["competitors"]}
         h,a=sides["home"],sides["away"]
+        # Team schedule entries often omit status even for final scored games.
+        meta=e.get("season",{})
+        if isinstance(meta,dict) and meta.get("year") is not None and int(meta["year"])!=season:return None
+        phase_meta=e.get("seasonType",{})
+        if isinstance(phase_meta,dict) and phase_meta.get("type") is not None and int(phase_meta["type"])!=phase:return None
+        when=dt.datetime.fromisoformat(str(e["date"]).replace("Z","+00:00"))
+        if when.tzinfo is None or when>=dt.datetime.now(dt.timezone.utc):return None
         status=e.get("status",{}).get("type",{})
-        if status.get("completed") is not True and str(status.get("state"))!="post":return None
+        if status and status.get("completed") is not True and str(status.get("state"))!="post":return None
         hs,as_=score(h),score(a)
         if hs is None or as_ is None or hs==as_:return None
         home,away=h["team"]["abbreviation"],a["team"]["abbreviation"]
@@ -81,6 +88,8 @@ def main():
     archive={str(g["id"]):g for g in existing.get("games",[]) if g.get("id")}
     prev=json.loads(STATUS.read_text()) if STATUS.exists() else {}
     completed=set(prev.get("completed_sources",[]))
+    # Previous status-less-event bug incorrectly marked 600 sources as complete.
+    if prev.get("game_count")==0 and completed:completed.clear()
     errors=[]
     teams=teams_from_response(fetch("teams"))
     if len(teams)<28:
@@ -101,6 +110,9 @@ def main():
                     for e in rows:
                         result=game(e,season,phase)
                         if result:archive[result["id"]]=result
+                    if phase==2 and not any(
+                        isinstance(x.get("season"),dict) and int(x["season"].get("year",0))==season
+                        for x in rows):raise ValueError("regular-season response missing requested season")
                     completed.add(key)
                 except Exception as exc:
                     errors.append({"source":key,"error":type(exc).__name__})
@@ -112,11 +124,12 @@ def main():
     now=dt.datetime.now(dt.timezone.utc).isoformat()
     counts={str(y):sum(x["season_end"]==y for x in games) for y in SEASONS}
     GAMES.write_text(json.dumps({"captured_at":now,"source":"ESPN public NBA team schedules","games":games},ensure_ascii=False,separators=(",",":"))+"\n")
+    sufficiently_covered=all(counts[str(y)]>=600 for y in SEASONS)
     STATUS.write_text(json.dumps({"updated_at_utc":now,"years":SEASONS,"regular_and_playoffs":True,
         "completed_sources":sorted(completed),"expected_sources":len(SEASONS)*2*len(teams),
         "games_by_season":counts,"game_count":len(games),"errors":errors,
-        "complete":len(completed)==len(SEASONS)*2*len(teams),
-        "note":"Completed source requests do not guarantee 100% schedule coverage; audit per-season row counts."},ensure_ascii=False,separators=(",",":"))+"\n")
+        "complete":len(completed)==len(SEASONS)*2*len(teams) and sufficiently_covered,
+        "note":"Complete only with all source queries and at least 600 actual scored games per season."},ensure_ascii=False,separators=(",",":"))+"\n")
     print("NBA history:",len(games),"games,",len(completed),"/",len(SEASONS)*2*len(teams),"sources; errors:",len(errors))
 
 if __name__=="__main__":main()
