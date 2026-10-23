@@ -1,0 +1,50 @@
+name: Backfill ten NBA seasons
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/backfill_history.py'
+      - '.github/workflows/history-backfill.yml'
+  schedule:
+    - cron: '41 4 * * *'
+permissions:
+  contents: write
+concurrency:
+  group: nba-history-backfill
+  cancel-in-progress: false
+jobs:
+  history:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch ten-season regular and postseason game results
+        env:
+          NBA_HISTORY_BATCH_SOURCES: '650'
+        run: python3 scripts/backfill_history.py
+      - name: Integrity audit
+        run: |
+          python3 -m unittest discover -s tests -v
+          python3 - <<'PY'
+          import json
+          d=json.load(open('data/history_status.json'))
+          assert 2017 in d['years'] and 2026 in d['years']
+          assert d['game_count'] >= 0
+          print('History coverage:',d['game_count'],'completed source requests',len(d['completed_sources']), '/',d['expected_sources'])
+          PY
+      - name: Publish history results and coverage status
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/history_games.json data/history_status.json
+          if ! git diff --cached --quiet; then
+            git commit -m "data: update ten-season NBA history and coverage"
+            git pull --rebase
+            git push
+          fi
+      - name: Request Pages refresh
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X POST "repos/${{ github.repository }}/dispatches" -f event_type=refresh-pages || true
