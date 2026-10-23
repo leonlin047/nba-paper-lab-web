@@ -115,7 +115,32 @@ def summary(game,forecast,market,total):
         raise ValueError(f"Report length invalid {len(report)} for {game.get('id')}: {report}")
     return report
 
-def build_reports(games,predictions,markets,now,historical_games=None):
+def relevant_reporting(game,articles):
+    """Attach up to three earlier newsroom headlines, never social rumors.
+    Team alignment is by source metadata, not inferred unverified player names.
+    """
+    kickoff=iso(game.get("date"))
+    if kickoff is None:return []
+    teams={game.get("home"),game.get("away")}
+    equivalence={"GS":"GSW","GSW":"GS","NY":"NYK","NYK":"NY",
+      "NO":"NOP","NOP":"NO","SA":"SAS","SAS":"SA",
+      "WSH":"WAS","WAS":"WSH","UTAH":"UTA","UTA":"UTAH"}
+    teams|={equivalence[t] for t in list(teams) if t in equivalence}
+    links=[]
+    for article in articles or []:
+        published=iso(article.get("published_at_utc"))
+        if published is None or not (kickoff-dt.timedelta(days=3)<=published<=kickoff):continue
+        if not any(t in teams for t in article.get("teams",[])):continue
+        if article.get("x_post_verified") is True:continue
+        url=article.get("url","")
+        if not isinstance(url,str) or not url.startswith("https://www.espn.com/"):continue
+        links.append({"title":article.get("title","")[:180],"url":url,
+            "source":article.get("source","ESPN"),"author":article.get("author",""),
+            "published_at_utc":article.get("published_at_utc")})
+    links.sort(key=lambda a:a["published_at_utc"],reverse=True)
+    return links[:3]
+
+def build_reports(games,predictions,markets,now,historical_games=None,articles=None):
     finals=[g for g in games if g.get("status")=="post"
         and isinstance(g.get("home_score"),int) and isinstance(g.get("away_score"),int)]
     # Historical outcomes are permitted only when genuinely scored and dated.
@@ -147,7 +172,8 @@ def build_reports(games,predictions,markets,now,historical_games=None):
                 "total":{"line":tline,**total} if total else {"line":tline,
                       "over_probability_experimental":None,"under_probability_experimental":None}},
              "observed_market":m is not None,
-             "news_verified":False,"model_validated":False,
+             "news_verified":False,"related_reporting":relevant_reporting(g,articles),
+             "model_validated":False,
              "report_zh":summary(g,pred,m,total),
              "generated_at_utc":now}
         out.append(row)
