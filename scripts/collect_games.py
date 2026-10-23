@@ -32,14 +32,25 @@ def game(e):
 today=dt.datetime.now(UTC).date()
 events={}
 errors=[]
-# ESPN date range requests reduce API calls; past 60 days for experimental rating warmup.
-for start,end in [(today-dt.timedelta(days=60),today-dt.timedelta(days=1)),(today,today+dt.timedelta(days=7))]:
+# ESPN scoreboard accepts single-day YYYYMMDD dates; unsupported ranges caused HTTP 400.
+# Collect recent completed games and next seven days, with bounded requests.
+for offset in list(range(-14,1))+list(range(1,8)):
+    day=today+dt.timedelta(days=offset)
     try:
-        data=fetch("scoreboard",{"dates":start.strftime("%Y%m%d")+"-"+end.strftime("%Y%m%d"),"limit":"500"})
+        data=fetch("scoreboard",{"dates":day.strftime("%Y%m%d"),"limit":"100"})
         for e in data.get("events",[]):
             try:events[e["id"]]=game(e)
             except (KeyError,IndexError,TypeError):pass
-    except Exception as exc:errors.append(str(exc)[:140])
+    except Exception as exc:
+        errors.append(day.isoformat()+": "+str(exc)[:100])
+# Fallback to default scoreboard when dated queries fail.
+if not events:
+    try:
+        data=fetch("scoreboard")
+        for e in data.get("events",[]):
+            try:events[e["id"]]=game(e)
+            except (KeyError,IndexError,TypeError):pass
+    except Exception as exc:errors.append("default scoreboard: "+str(exc)[:100])
 games=sorted(events.values(),key=lambda x:x.get("date") or "")
 if not games:
     raise SystemExit("No games fetched; keep previous snapshot. "+str(errors))
@@ -51,7 +62,7 @@ for g in games:
     ph=elo.get(h,1500);pa=elo.get(a,1500)
     p=1/(1+10**((pa-ph-65)/400))
     if g["status"]=="pre":
-        predictions.append({"event_id":g["id"],"date":g["date"],"home":h,"away":a,"home_win_probability":round(p,4),"model":"elo_60d_experimental","validated":False})
+        predictions.append({"event_id":g["id"],"date":g["date"],"home":h,"away":a,"home_win_probability":round(p,4),"model":"elo_recent_experimental","validated":False})
     elif g["status"]=="post" and g["home_score"] is not None and g["away_score"] is not None:
         result=1 if g["home_score"]>g["away_score"] else 0
         shift=20*(result-p)
