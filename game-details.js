@@ -1,9 +1,21 @@
 "use strict";(()=>{const el=id=>document.getElementById(id);const line=(parent,tag,text)=>{const n=document.createElement(tag);n.textContent=text;parent.append(n);return n};async function run(){try{const r=await fetch("./data/games.json?t="+Date.now(),{cache:"no-store"});if(!r.ok)throw Error("HTTP "+r.status);const d=await r.json();
 const reportsData=await fetch("./data/reports.json?v="+Date.now(),{cache:"no-store"}).then(r=>r.ok?r.json():{}).catch(()=>({}));
 const reportMap=new Map((reportsData.reports||[]).map(x=>[String(x.event_id),x]));
+const twData=await fetch("./data/tw_odds.json?v="+Date.now(),{cache:"no-store"}).then(r=>r.ok?r.json():{}).catch(()=>({}));
+const twMap=new Map((twData.games||[]).filter(x=>x.join_verified&&x.eligible_for_pregame_backtest).map(x=>[String(x.event_id),x]));
 const zh=window.NbaZh||{teamShort:v=>v,player:v=>v};
 const usPrice=v=>typeof v==="number"?(v>0?"+":"")+v:"—";
-const upcoming=el("upcoming-games"),completed=el("completed-details");upcoming.replaceChildren();completed.replaceChildren();const games=Array.isArray(d.games)?d.games:[];const future=games.filter(g=>g.status==="pre").slice(0,45);if(!future.length)line(upcoming,"p","目前沒有未開賽的賽程快照。");for(const g of future){const c=line(upcoming,"div",zh.teamShort(g.away)+" 對 "+zh.teamShort(g.home)+" · "+new Date(g.date).toLocaleString("zh-TW",{timeZone:"Asia/Taipei"}));c.style.cssText="padding:12px 0;border-bottom:1px solid #304362";const q=(d.market_snapshots||[]).find(x=>String(x.event_id)===String(g.id));if(q){
+const upcoming=el("upcoming-games"),completed=el("completed-details");upcoming.replaceChildren();completed.replaceChildren();const games=Array.isArray(d.games)?d.games:[];const future=games.filter(g=>g.status==="pre").slice(0,45);if(!future.length)line(upcoming,"p","目前沒有未開賽的賽程快照。");for(const g of future){const c=line(upcoming,"div",zh.teamShort(g.away)+" 對 "+zh.teamShort(g.home)+" · "+new Date(g.date).toLocaleString("zh-TW",{timeZone:"Asia/Taipei"}));c.style.cssText="padding:12px 0;border-bottom:1px solid #304362";const tw=twMap.get(String(g.id));
+if(tw){
+  const ml=tw.moneyline||{},sp=tw.spread||{},t=tw.total||{};
+  const domestic=line(c,"p","台灣運彩盤｜獨贏主／客 "+(ml.home_decimal??"—")+"/"+(ml.away_decimal??"—")+
+    "；讓分主 "+(sp.home_line??"—")+"／客 "+(sp.away_line??"—")+"（賠率 "+(sp.home_decimal??"—")+"/"+(sp.away_decimal??"—")+"）"+
+    "；大小 "+(t.line??"—")+"（大"+(t.over_decimal??"—")+"／小"+(t.under_decimal??"—")+"）");
+  domestic.style.cssText="font-weight:600;color:#bcdefe";
+  line(c,"p","公開來源：玩運彩運彩盤（第三方整理，非官方API）；擷取 "+
+    new Date(tw.observed_at_utc).toLocaleString("zh-TW",{timeZone:"Asia/Taipei"}));
+}
+const q=(d.market_snapshots||[]).find(x=>String(x.event_id)===String(g.id));if(q){
  const x=q.moneyline||{},s=q.spread||{},t=q.total||{},p=q.observed_prices||{};
  line(c,"p","觀測國際盤："+(q.provider||"未知莊家")+" · 獨贏 主 "+usPrice(x.home_american)+"／客 "+usPrice(x.away_american)+"（美式）");
  line(c,"p","讓分 主 "+(s.home_line??"—")+"／客 "+(s.away_line??"—")+"；雙邊賠率 "+usPrice(p.spread_home_american)+"／"+usPrice(p.spread_away_american));
