@@ -243,12 +243,18 @@ if news_path.exists():
         if isinstance(headline_file.get("articles"),list):headlines=headline_file["articles"]
     except (ValueError,OSError) as exc:
         errors.append("news report input: "+type(exc).__name__)
+season_priors={}
+prior_path=ROOT/"season_priors.json"
+if prior_path.exists():
+    try:season_priors=json.loads(prior_path.read_text())
+    except (OSError,ValueError):errors.append("PBP priors JSON unavailable")
 reports=build_reports(games,predictions,market_snapshots,now_reports,
     historical_games=historical,articles=headlines,
-    analyst_forecasts=analyst_forecasts,box_samples=box_samples,injury_snapshot=injury_snapshot)
+    analyst_forecasts=analyst_forecasts,box_samples=box_samples,
+    injury_snapshot=injury_snapshot,season_priors=season_priors)
 (ROOT/"reports.json").write_text(json.dumps({
     "version":"1.1","captured_at":now_reports,"analyst_validation":analyst_validation,
-    "reports":reports,"generated":len(reports),"historical_games_available":len(historical),"news_items_available":len(headlines),
+    "reports":reports,"generated":len(reports),"historical_games_available":len(historical),"news_items_available":len(headlines),"previous_season_team_priors":season_priors.get("team_count",0),
     "description":"獨贏／讓分／大小分三市場之試驗模型觀察；無資料時明示缺值",
     "market_data_rights":"來源資料授權待確認；僅展示自製分析"
 },ensure_ascii=False,separators=(",",":"))+"\n")
