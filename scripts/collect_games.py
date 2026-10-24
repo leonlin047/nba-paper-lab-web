@@ -4,6 +4,7 @@ Research snapshots only. Respect provider terms; no access-control bypass.
 """
 import datetime as dt, json, pathlib, time, urllib.request, urllib.parse
 from market_model import build_market
+from espn_odds import compact_market,validate_quote
 from report_engine import build_reports
 from elo_history import train_and_forecast
 from analyst_factors import extract_four_factors
@@ -36,7 +37,20 @@ def game(e):
     return {"id":e["id"],"date":e.get("date"),"home":h["team"]["abbreviation"],"away":a["team"]["abbreviation"],"home_name":h["team"].get("displayName"),"away_name":a["team"].get("displayName"),"home_score":score(h),"away_score":score(a),"status":st.get("state"),"status_label":st.get("description"),"season_year":(e.get("season") or {}).get("year"),"season_phase":(e.get("season") or {}).get("type"),"venue":c.get("venue",{}).get("fullName"),"broadcasts":[b.get("names",[]) for b in c.get("broadcasts",[])]}
 today=dt.datetime.now(UTC).date()
 events={}
+scoreboard_odds=[]
 errors=[]
+def register_scoreboard_event(e):
+    item=game(e)
+    events[str(e["id"])]=item
+    if item.get("status")!="pre":return
+    comps=e.get("competitions") or []
+    if not comps:return
+    for quote in comps[0].get("odds",[]) or []:
+        captured=dt.datetime.now(UTC).isoformat()
+        normalized=compact_market(quote,item["id"],captured,"ESPN scoreboard embedded odds")
+        if normalized:
+            scoreboard_odds.append(validate_quote(normalized,item["home"],item["away"]))
+
 # ESPN scoreboard accepts single-day YYYYMMDD dates; unsupported ranges caused HTTP 400.
 # Collect recent completed games and next seven days, with bounded requests.
 for offset in list(range(-14,1))+list(range(1,8)):
@@ -44,8 +58,8 @@ for offset in list(range(-14,1))+list(range(1,8)):
     try:
         data=fetch("scoreboard",{"dates":day.strftime("%Y%m%d"),"limit":"100"})
         for e in data.get("events",[]):
-            try:events[e["id"]]=game(e)
-            except (KeyError,IndexError,TypeError):pass
+            try:register_scoreboard_event(e)
+            except (KeyError,IndexError,TypeError,AttributeError):pass
     except Exception as exc:
         errors.append(day.isoformat()+": "+str(exc)[:100])
 # Fallback to default scoreboard when dated queries fail.
@@ -53,8 +67,8 @@ if not events:
     try:
         data=fetch("scoreboard")
         for e in data.get("events",[]):
-            try:events[e["id"]]=game(e)
-            except (KeyError,IndexError,TypeError):pass
+            try:register_scoreboard_event(e)
+            except (KeyError,IndexError,TypeError,AttributeError):pass
     except Exception as exc:errors.append("default scoreboard: "+str(exc)[:100])
 games=sorted(events.values(),key=lambda x:x.get("date") or "")
 if not games:
@@ -70,22 +84,41 @@ if history_path.exists():
         errors.append("historical Elo input: "+type(exc).__name__)
 predictions,validation=train_and_forecast(historical,games)
 analyst_forecasts,analyst_validation=evaluate_and_project(historical,games,predictions)
-# ESPN summary may include licensed/attributed market lines. Never infer missing prices.
-# This is source discovery only; publication requires rights review.
-odds_discovery=[]
-for g in [x for x in games if x["status"]=="pre"][:28]:
+# ESPN scoreboard embedded odds expose nested moneyline, spread and total
+# prices even when top-level summary fields are absent. Supplement missing
+# markets from summary; never invent unobserved quotes or claim TW odds.
+odds_discovery=list(scoreboard_odds)
+def market_coverage(q):
+    return sum([
+        q.get("home_moneyline") is not None and q.get("away_moneyline") is not None,
+        q.get("home_spread_verified") is not None
+          and q.get("home_spread_american") is not None and q.get("away_spread_american") is not None,
+        q.get("over_under") is not None
+          and q.get("over_american") is not None and q.get("under_american") is not None
+    ])
+selected={}
+for quote in scoreboard_odds:
+    key=(str(quote["event_id"]),quote["provider"])
+    if key not in selected or market_coverage(quote)>market_coverage(selected[key]):
+        selected[key]=quote
+to_supplement=[]
+for g in [x for x in games if x["status"]=="pre"]:
+    known=[q for q in selected.values() if str(q["event_id"])==str(g["id"])]
+    if not known or max(market_coverage(q) for q in known)<3:
+        to_supplement.append(g)
+for g in to_supplement[:32]:
     try:
         d=fetch("summary",{"event":g["id"]})
-        for q in d.get("pickcenter",[]) or []:
-            if not isinstance(q,dict):continue
-            provider=q.get("provider") or {}
-            odds_discovery.append({"event_id":g["id"],"provider":provider.get("name") if isinstance(provider,dict) else str(provider),"spread":q.get("spread"),"over_under":q.get("overUnder"),"details":q.get("details"),"home_moneyline":q.get("homeTeamOdds",{}).get("moneyLine") if isinstance(q.get("homeTeamOdds"),dict) else None,"away_moneyline":q.get("awayTeamOdds",{}).get("moneyLine") if isinstance(q.get("awayTeamOdds"),dict) else None,
-                "home_spread_american":q.get("homeTeamOdds",{}).get("spreadOdds") if isinstance(q.get("homeTeamOdds"),dict) else None,
-                "away_spread_american":q.get("awayTeamOdds",{}).get("spreadOdds") if isinstance(q.get("awayTeamOdds"),dict) else None,
-                "over_american":q.get("overOdds"),"under_american":q.get("underOdds"),
-                "provider_open_last":{k:q.get(k) for k in ("moneyline","pointSpread","total") if isinstance(q.get(k),dict)},
-                "captured_at_utc":dt.datetime.now(UTC).isoformat(),"rights_status":"review"})
-    except Exception as exc:errors.append("odds discovery "+g["id"]+": "+str(exc)[:80])
+        for original in d.get("pickcenter",[]) or []:
+            quoted=compact_market(original,g["id"],dt.datetime.now(UTC).isoformat(),"ESPN game summary pickcenter")
+            if not quoted:continue
+            quoted=validate_quote(quoted,g["home"],g["away"])
+            key=(str(quoted["event_id"]),quoted["provider"])
+            if key not in selected or market_coverage(quoted)>market_coverage(selected[key]):
+                selected[key]=quoted
+    except Exception as exc:
+        errors.append("odds discovery "+str(g["id"])+": "+str(exc)[:80])
+odds_discovery=list(selected.values())
 # Public NBA odds endpoint: normalize observed markets only, never synthesize quotes.
 # Treat upstream rights as review until authorized for public redistribution.
 odds_observations=[]
