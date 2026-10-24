@@ -93,9 +93,15 @@ def build_market(pick, game, forecast):
     hd = american_to_decimal(pick.get("home_moneyline"))
     ad = american_to_decimal(pick.get("away_moneyline"))
     fair = no_vig_probabilities(hd, ad) if hd and ad else None
-    spread = home_spread_from_pickcenter(
-        pick.get("spread"), pick.get("details"), home, away
-    )
+    # The scoreboard market adapter verifies both sides and the named favorite.
+    # Keep its verified home-side line, including valid zero-point pick'em quotes.
+    # Do not fall back to details after the adapter explicitly rejects a conflict.
+    if "home_spread_verified" in pick:
+        spread=pick["home_spread_verified"]
+    else:
+        spread=home_spread_from_pickcenter(
+            pick.get("spread"), pick.get("details"), home, away
+        )
     p = forecast.get("home_win_probability") if forecast else None
     home_cover = experimental_cover_probability(p, spread)
     is_integer = spread is not None and float(spread).is_integer()
@@ -107,6 +113,8 @@ def build_market(pick, game, forecast):
         "provider": pick.get("provider") or "Unknown",
         "captured_at_utc": pick.get("captured_at_utc"),
         "rights_status": "review",
+        "source_endpoint":pick.get("source_endpoint"),
+        "market_data_type":"observed_bookmaker_quote",
         "moneyline": {
             "home_american": pick.get("home_moneyline") if hd else None,
             "away_american": pick.get("away_moneyline") if ad else None,
