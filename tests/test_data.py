@@ -36,6 +36,34 @@ class DataTests(unittest.TestCase):
    spread=m.get("spread",{})
    hline,aline=spread.get("home_line"),spread.get("away_line")
    if hline is not None and aline is not None:self.assertAlmostEqual(hline,-aline,places=4)
+ def test_market_coverage_is_not_inflated(self):
+  d=json.loads((ROOT/"data/games.json").read_text())
+  coverage=d.get("market_coverage")
+  if coverage is None:self.skipTest("New scoreboard odds source has not published")
+  markets=d.get("market_snapshots",[])
+  complete=set()
+  for x in markets:
+   ml=x.get("moneyline") or {}
+   sp=x.get("spread") or {}
+   tl=x.get("total") or {}
+   price=x.get("observed_prices") or {}
+   if (ml.get("home_decimal") is not None and ml.get("away_decimal") is not None
+       and sp.get("home_line") is not None and tl.get("line") is not None
+       and all(price.get(k) is not None for k in (
+         "spread_home_american","spread_away_american",
+         "total_over_american","total_under_american"))):
+    complete.add(str(x["event_id"]))
+  self.assertEqual(coverage["complete_three_market_events"],len(complete))
+  self.assertEqual(coverage["paired_market_events"],len({str(x["event_id"]) for x in markets}))
+  self.assertFalse(coverage["taiwan_sportslottery_connected"])
+  self.assertLessEqual(coverage["complete_three_market_events"],coverage["future_game_count"])
+ def test_coverage_has_public_ui(self):
+  html=(ROOT/"index.html").read_text()
+  js=(ROOT/"research-dashboard.js").read_text()
+  self.assertIn('id="pl-market-coverage"',html)
+  self.assertIn("實際獨贏賠率",js)
+  self.assertIn("實際讓分賠率",js)
+  self.assertIn("實際大小分賠率",js)
  def test_playsport_status_is_not_misrepresented(self):
   p=ROOT/"data/playsport_status.json"
   if not p.exists():self.skipTest("First probe pending")
