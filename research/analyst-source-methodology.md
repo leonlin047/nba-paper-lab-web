@@ -7,7 +7,7 @@
 | ESPN scoreboard + 2016–17 至 2025–26 歷史賽果 | 12,815 場已完成比賽，時間與主客隊、得分；目前約 2–3 週賽程 | 長期 Elo、逐場得失分、主客、休息、交手、時序回測 | 沒有隊伍失分就說防守效率、以比賽日期推定真實飛行時程 |
 | ESPN game summary/boxscore | 已驗證團隊 FGA、FGM、3PA、3PM、FTA、OREB、DREB、TO；近況擷取上限 45 場 | eFG%、三分出手率、失誤／估算回合、團隊出賽紀錄 | 估算回合數並非 NBA 官方 Pace；沒有 boxscore 就不得補數 |
 | ESPN NBA injuries | 球員與隊伍代碼、傷病狀態、通報日期；不同場次須以擷取時間為準 | 賽前不確定性標示、出賽資訊風險 | Out/GTD 文字並非保證上場時間；沒有球員 on/off 模型就不調整機率 |
-| PBP Stats 官方 API | 已測試 `/get-pace-efficiency-summary/nba`，2025–26 常規賽 30 隊 `ppp`、`spp` | 前季每回合得分與進攻速度參照（每日最多刷新一次） | 前季資料不能稱為本季即時節奏；2026 夏季異動需要另查 |
+| PBP Stats 官方 API | 已測試 `/get-pace-efficiency-summary/nba`，2025–26 常規賽 30 隊 `ppp`、`spp`、實際 `OffPoss`／`DefPoss`、得失分、FG2／FG3 命中出手、進攻籃板與失誤 | 前季真實每100回合攻守效率、每48分鐘回合數、eFG／TO／OREB／FTA參照（每日最多刷新一次） | 前季資料不能稱為本季即時節奏；2026 夏季異動需要另查 |
 | ESPN summary pickcenter / 國際盤 | 部分賽事讓分、獨贏、總分，帶供應商與快照擷取時間；亦有業者「開盤／目前」標記 | 比較相同賽事三種玩法與市場機率 | 業者標記開／目前不具每次異動的時間戳；不能猜測莊家資金或動機 |
 | ESPN NBA News API | 署名、標題、刊登時間、相關隊伍及來源 URL | 賽事背景、供人工核對傷病及陣容變化 | 新聞標題和隊伍標籤不能當成先發名單或數值模型輸入 |
 | NBA 官方傷病公告 | 官方參考路徑 `https://official.nba.com/nba-injury-report-2026-27-season/` | 需要與 ESPN 交叉確認的高優先級來源 | 目前沒有已驗收的逐場官方名單自動解析器 |
@@ -37,7 +37,7 @@
 ## 4. 進階資料源驗證候選
 
 - [NBA 官方技術統計定義](https://www.nba.com/stats/help/glossary)：Pace、OffRtg、DefRtg、eFG%、TOV%、OREB%。
-- [PBP Stats API docs](https://api.pbpstats.com/docs)：有實際 documented `get-pace-efficiency-summary`、`get-four-factor-on-off`、`get-game-logs`、`get-possessions`，需審核額度與使用權後再擴充。當前只接入前季 PPP／SPP。
+- [PBP Stats API docs](https://api.pbpstats.com/docs)：有實際 documented `get-pace-efficiency-summary`、`get-four-factor-on-off`、`get-game-logs`、`get-possessions`，需審核額度與使用權後再擴充。當前接入前季 PPP／SPP 與完整隊伍回合合計欄位；未接通球員on/off、當季球員陣容或賽前出賽時數。
 - [The Odds API historical odds](https://the-odds-api.com/historical-odds-data/)：公開文件表明歷史快照從 2020 年起，並且屬付費權限；不能假定擁有 2016 年以來的十季盤口。
 - [JBot 台灣運彩 API](https://sportsbot.tech/api/sportslottery/)：有實作私有端點解析，但現無已授權的排程金鑰。
 - [官方 NBA 傷病](https://official.nba.com/nba-injury-report-2026-27-season/)：高優先的人工／未來結構化驗證來源。
