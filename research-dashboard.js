@@ -107,6 +107,14 @@
           section("前季回合效率（PBP Stats）","主／客每回合得分 "+ph.offensive_points_per_possession_previous_season+"/"+pa.offensive_points_per_possession_previous_season+
             "，每次進攻耗時 "+ph.offensive_seconds_per_possession_previous_season+"/"+pa.offensive_seconds_per_possession_previous_season+
             "秒；此為2025–26完整賽季，不是本賽季即時效率。");
+         if(ph.offensive_rating_previous_season!=null&&pa.offensive_rating_previous_season!=null){
+           section("前季每100回合進攻效率","主／客 "+ph.offensive_rating_previous_season+"／"+pa.offensive_rating_previous_season+
+             "，防守失分／100回合 "+ph.defensive_rating_previous_season+"／"+pa.defensive_rating_previous_season+"（越低越好）");
+           section("前季實際回合與四要素","主／客Pace "+ph.possessions_per_48_previous_season+"／"+pa.possessions_per_48_previous_season+
+             "，eFG% "+ph.efg_pct_previous_season+"／"+pa.efg_pct_previous_season+
+             "，TO% "+ph.turnover_per_100_possessions_previous_season+"／"+pa.turnover_per_100_possessions_previous_season+
+             "，OREB% "+ph.offensive_fg_rebound_pct_previous_season+"／"+pa.offensive_fg_rebound_pct_previous_season);
+         }
        }else section("前季回合資料","PBP Stats 前季效率未取得，不以場均分數冒充回合效率。");
        const box=evidence.box_four_factors||{},bh=box.home||{},ba=box.away||{};
        if(bh.n>=3&&ba.n>=3){
