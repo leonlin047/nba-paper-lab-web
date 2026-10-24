@@ -101,6 +101,13 @@
        if(h.home&&h.home.n)section("主隊主場",h.home.n+"場淨勝"+fmtCount(h.home.avg_margin)+"分");
        if(a.away&&a.away.n)section("客隊客場",a.away.n+"場淨勝"+fmtCount(a.away.avg_margin)+"分");
        if(f.h2h&&f.h2h.n)section("過去兩年交手",f.h2h.n+"場，當前主隊平均淨勝"+fmtCount(f.h2h.avg_home_team_margin)+"分；跨季樣本不等於今季實力");
+       if(h.n&&a.n)section("跨季樣本檢查","主隊"+(h.current_season_n??"—")+"/"+h.n+"場、客隊"+(a.current_season_n??"—")+"/"+a.n+"場屬本賽季；休賽季轉隊可能改變代表性。");
+       const prior=evidence.previous_season_efficiency||{},ph=prior.home||{},pa=prior.away||{};
+       if(ph.offensive_points_per_possession_previous_season!=null&&pa.offensive_points_per_possession_previous_season!=null){
+          section("前季回合效率（PBP Stats）","主／客每回合得分 "+ph.offensive_points_per_possession_previous_season+"/"+pa.offensive_points_per_possession_previous_season+
+            "，每次進攻耗時 "+ph.offensive_seconds_per_possession_previous_season+"/"+pa.offensive_seconds_per_possession_previous_season+
+            "秒；此為2025–26完整賽季，不是本賽季即時效率。");
+       }else section("前季回合資料","PBP Stats 前季效率未取得，不以場均分數冒充回合效率。");
        const box=evidence.box_four_factors||{},bh=box.home||{},ba=box.away||{};
        if(bh.n>=3&&ba.n>=3){
           section("投籃與控球（實際賽後統計）","主／客eFG% "+fmtCount(bh.eFG_pct)+"／"+fmtCount(ba.eFG_pct)+"；三分出手率 "+fmtCount(bh.three_point_attempt_rate)+"／"+fmtCount(ba.three_point_attempt_rate));
