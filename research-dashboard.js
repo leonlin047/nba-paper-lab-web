@@ -285,8 +285,9 @@
  async function load(){
    $("pl-update").textContent="讀取盤口與預測快照…";
    try{
-     const [d,g,p,reportsData]=await Promise.all([json("./data/research.json"),json("./data/games.json"),json("./data/playsport_status.json").catch(()=>null),json("./data/reports.json").catch(()=>null)]);
-     predictions(d.predictions,d.validation,g.market_snapshots,g.odds_discovery,reportsData&&reportsData.reports);
+     const [d,g,p,reportsData,tw]=await Promise.all([json("./data/research.json"),json("./data/games.json"),json("./data/playsport_status.json").catch(()=>null),json("./data/reports.json").catch(()=>null),json("./data/tw_odds.json").catch(()=>null)]);
+     predictions(d.predictions,d.validation,g.market_snapshots,g.odds_discovery,reportsData&&reportsData.reports,tw&&tw.games);
+     taiwanOverview(tw);
      if($("model-sample"))$("model-sample").textContent=safe(d.validation&&d.validation.sample_size);
      if($("model-brier"))$("model-brier").textContent=num(d.validation&&d.validation.brier)!==null?d.validation.brier.toFixed(4):"—";
      if($("model-logloss"))$("model-logloss").textContent=num(d.validation&&d.validation.log_loss)!==null?d.validation.log_loss.toFixed(4):"—";
@@ -309,7 +310,11 @@
        const near=coverage.next_24h_game_count;
        const nearFull=coverage.next_24h_complete_three_market_events;
        const short=typeof near==="number"?"未來24小時三市場完整："+(nearFull??"—")+"/"+near+"場；":"";
-       $("pl-market-coverage").textContent=short+"全部未來賽程國際盤口配對："+paired+"/"+future+"場、三市場完整"+(complete===undefined?"待驗收":complete)+"場。台灣運彩目前仍為0場；無盤口時絕不以模型猜測填補。";
+       const twCount=tw&&typeof tw.pregame_matches==="number"?tw.pregame_matches:0;
+       const twComplete=tw&&typeof tw.complete_pregame==="number"?tw.complete_pregame:0;
+       $("pl-market-coverage").textContent="台灣玩運彩運彩盤："+twCount+"場已配對賽前盤，完整獨贏／讓分／大小："+twComplete+"場；"+
+        short+"國際盤口："+paired+"/"+future+"場，三市場完整"+(complete===undefined?"待驗收":complete)+"場。"+
+        "台灣盤為第三方整理的觀測值，不是官方API。不同莊家賠率不得混用；資料不足不填假數字。";
      }
      marketOverview(g.market_snapshots,g.odds_discovery);
      sources(d,p);
