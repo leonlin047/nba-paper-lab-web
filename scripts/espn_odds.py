@@ -56,6 +56,7 @@ def compact_market(q,game_id,captured_at,source):
     if home_line is not None and away_line is not None and abs(home_line+away_line)>.01:
         home_line=None;away_line=None
     if spread is None:spread=home_line
+    if total is None:total=safe_num(nested(q,"total","over","close","line").lstrip("oO") if isinstance(nested(q,"total","over","close","line"),str) else nested(q,"total","over","close","line"),100,350)
     details=q.get("details")
     if not isinstance(details,str):details=None
     if details is None and spread is not None:
@@ -100,18 +101,34 @@ def compact_market(q,game_id,captured_at,source):
         "rights_status":"review"
     }
 
+def normalize_team(code):
+    return ALIASES.get(str(code or "").upper(),str(code or "").upper())
+
 def validate_quote(quote,home,away):
-    """Strict market checks; handle ESPN team abbreviation variants."""
+    """Cross-check bookmakers' named favorite and both directional lines."""
     from market_model import home_spread_from_pickcenter
-    spread=quote.get("home_line_observed")
-    if spread is None:
-        spread=home_spread_from_pickcenter(quote.get("spread"),quote.get("details"),home,away)
     details=quote.get("details")
-    if spread is None and details:
-        spread=home_spread_from_pickcenter(None,details,home,away)
-    if spread is None:spread=None
+    home_line=quote.get("home_line_observed")
+    raw=quote.get("spread")
+    details_line=None
+    if isinstance(details,str):
+        m=re.fullmatch(r"\\s*([A-Za-z]{2,5})\\s*([+-])\\s*(\\d+(?:\\.\\d+)?)\\s*",details)
+        if m:
+            name,sign,value=m.groups()
+            signed=float(value)*(-1 if sign=="-" else 1)
+            if normalize_team(name)==normalize_team(home):details_line=signed
+            elif normalize_team(name)==normalize_team(away):details_line=-signed
+    if home_line is not None and details_line is not None and abs(home_line-details_line)>.011:
+        quote["invalid_reason"]="home_line_disagrees_with_named_favorite"
+        quote["home_spread_verified"]=None
+        return quote
+    verified=home_line if home_line is not None else details_line
+    if verified is not None and raw is not None and abs(raw-verified)>.011:
+        quote["invalid_reason"]="raw_spread_disagrees_with_verified_line"
+        verified=None
     away_line=quote.get("away_line_observed")
-    if spread is not None and away_line is not None and abs(spread+away_line)>.011:
-        spread=None
-    quote["home_spread_verified"]=spread
+    if verified is not None and away_line is not None and abs(verified+away_line)>.011:
+        quote["invalid_reason"]="opposite_spread_lines_do_not_balance"
+        verified=None
+    quote["home_spread_verified"]=verified
     return quote
