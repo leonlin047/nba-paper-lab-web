@@ -213,6 +213,48 @@
      box.append(card);
    }
  }
+ function taiwanOverview(snapshot){
+   const box=$("pl-tw-odds");if(!box)return;
+   box.replaceChildren();
+   if(!snapshot||!Array.isArray(snapshot.games)){
+      box.append(elt("p","pl-muted","台灣盤口快照尚未成功載入；請確認資料更新工作流程。"));
+      return;
+   }
+   const head=elt("p","pl-muted","已配對賽前台灣盤 "+snapshot.pregame_matches+" 場，三市場完整 "+
+     snapshot.complete_pregame+" 場；最後擷取："+time(snapshot.captured_at_utc)+
+     "。資料來自玩運彩公開頁面整理的「運彩盤」，非台灣運彩官方API。");
+   box.append(head);
+   if(!snapshot.games.length){
+     box.append(elt("p","pl-muted","目前沒有已核實的賽前台灣 NBA 盤口。"));
+     return;
+   }
+   for(const q of snapshot.games){
+     if(!q.join_verified||!q.eligible_for_pregame_backtest)continue;
+     const p=domesticMarket(q);if(!p)continue;
+     const c=elt("article","pl-panel");
+     const zh=code=>window.NbaZh?window.NbaZh.teamShort(code):code;
+     c.append(elt("strong","",zh(p.away)+" 對 "+zh(p.home)));
+     const date=time(q.tipoff_utc);
+     c.append(elt("p","pl-muted","開賽："+date+"；來源擷取："+time(p.captured_at_utc)));
+     const m=p.moneyline||{},sp=p.spread||{},t=p.total||{},n=m.home_no_vig_probability;
+     c.append(elt("p","pl-muted","獨贏主／客（十進位）："+safe(m.home_decimal)+"／"+safe(m.away_decimal)+
+        "；市場去水機率 "+fmt(num(n))+"／"+fmt(num(m.away_no_vig_probability))));
+     c.append(elt("p","pl-muted","讓分 主 "+safe(sp.home_line)+"／客 "+safe(sp.away_line)+
+        "；賠率主 "+safe(sp.home_decimal)+"／客 "+safe(sp.away_decimal)));
+     c.append(elt("p","pl-muted","大小分 "+safe(t.line)+"；賠率大 "+safe(t.over_decimal)+"／小 "+safe(t.under_decimal)));
+     const est=q.model_estimates||{};
+     c.append(elt("p","pl-muted","模型條件估計（非莊家機率）：主隊過盤 "+fmt(num(est.home_spread_cover_probability_experimental))+
+       "／大分 "+fmt(num(est.total_over_probability_experimental))+"；尚未以台灣盤歷史資料校準。"));
+     if(typeof q.source_url==="string"&&q.source_url.startsWith("https://www.playsport.cc/")){
+       const link=elt("a","","查看來源頁面");
+       link.href=q.source_url;link.target="_blank";link.rel="noopener noreferrer";
+       link.style.cssText="color:#a6caff;text-decoration:underline";
+       c.append(link);
+     }
+     box.append(c);
+   }
+   box.append(elt("p","pl-muted","版權與資料重用權仍待確認；本頁僅呈現必要的盤口事實及自製模型估計。賽後取得的價格不回填成賽前價格。"));
+ }
  function marketOverview(markets,raw){
    const box=$("pl-odds");box.replaceChildren();
    const entries=markets&&markets.length?markets:(raw||[]).map(x=>oldMarket(x));
