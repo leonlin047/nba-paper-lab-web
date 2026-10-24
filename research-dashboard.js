@@ -229,7 +229,10 @@
        const paired=coverage.paired_market_events??(g.market_snapshots||[]).length;
        const future=coverage.future_game_count??(d.predictions||[]).length;
        const complete=coverage.complete_three_market_events;
-       $("pl-market-coverage").textContent="實際國際盤口："+paired+"/"+future+"場配對，三市場完整"+(complete===undefined?"待驗收":complete)+"場；台灣運彩目前仍為0場。缺少盤口不會補模型猜測值。";
+       const near=coverage.next_24h_game_count;
+       const nearFull=coverage.next_24h_complete_three_market_events;
+       const short=typeof near==="number"?"未來24小時三市場完整："+(nearFull??"—")+"/"+near+"場；":"";
+       $("pl-market-coverage").textContent=short+"全部未來賽程國際盤口配對："+paired+"/"+future+"場、三市場完整"+(complete===undefined?"待驗收":complete)+"場。台灣運彩目前仍為0場；無盤口時絕不以模型猜測填補。";
      }
      marketOverview(g.market_snapshots,g.odds_discovery);
      sources(d,p);
