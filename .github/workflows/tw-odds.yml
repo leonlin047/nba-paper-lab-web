@@ -1,0 +1,80 @@
+name: Refresh public Taiwan NBA odds research
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/collect_tw_odds.py'
+      - 'tests/test_collect_tw_odds.py'
+      - '.github/workflows/tw-odds.yml'
+      - 'data/games.json'
+  schedule:
+    - cron: '43 */3 * * *'
+permissions:
+  contents: write
+concurrency:
+  group: public-nba-tw-odds
+  cancel-in-progress: false
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare HTML parser
+        run: python3 -m pip install --disable-pip-version-check 'beautifulsoup4>=4.12,<5'
+      - name: Validate Taiwanese NBA market parser
+        run: |
+          python3 -m py_compile scripts/collect_tw_odds.py
+          python3 -m unittest discover -s tests -p 'test_collect_tw_odds.py' -v
+      - name: Collect today and tomorrow public observed markets
+        run: python3 scripts/collect_tw_odds.py
+      - name: Verify market provenance and timestamp gates
+        run: |
+          python3 - <<'PY'
+          import json,datetime as dt
+          current=json.load(open("data/tw_odds.json"))
+          archive=json.load(open("data/tw_odds_history.json"))
+          assert current["source_games_parsed"]>=0
+          assert current["matched"]>=len(current["games"])
+          assert isinstance(archive["games"],dict)
+          seen=set()
+          for quote in current["games"]:
+              assert quote["event_id"] not in seen
+              seen.add(quote["event_id"])
+              assert quote["eligible_for_pregame_backtest"] is True
+              assert quote["join_verified"] is True
+              assert dt.datetime.fromisoformat(quote["observed_at_utc"]) < dt.datetime.fromisoformat(quote["tipoff_utc"].replace("Z","+00:00"))
+              assert quote["source_url"].startswith("https://www.playsport.cc/")
+              assert 1<=quote["complete_markets"]<=3
+          print("Taiwan market records:",current["matched"],"matched,",
+                current["complete_pregame"],"three-market complete; provenance verified")
+          PY
+      - name: Commit bounded, dated factual snapshots
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          tmpdir="$(mktemp -d)"
+          cp data/tw_odds.json "$tmpdir/tw_odds.json"
+          cp data/tw_odds_history.json "$tmpdir/tw_odds_history.json"
+          for attempt in 1 2 3; do
+            git fetch origin main
+            changed="$(git diff --name-only HEAD origin/main -- scripts/collect_tw_odds.py tests/test_collect_tw_odds.py .github/workflows/tw-odds.yml)"
+            if [ -n "$changed" ]; then
+              echo "A newer parser version has been committed; skip stale snapshots."
+              exit 0
+            fi
+            git reset --hard origin/main
+            cp "$tmpdir/tw_odds.json" data/tw_odds.json
+            cp "$tmpdir/tw_odds_history.json" data/tw_odds_history.json
+            git add data/tw_odds.json data/tw_odds_history.json
+            if git diff --cached --quiet; then
+              echo 'No Taiwan market changes'
+              exit 0
+            fi
+            git commit -m 'data: refresh observed Taiwan NBA market snapshots'
+            if git push; then exit 0; fi
+            sleep "$attempt"
+          done
+          exit 1
