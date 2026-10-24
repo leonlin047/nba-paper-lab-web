@@ -80,9 +80,9 @@ def evaluate_and_project(historical,current,predictions):
     max_time=datetime.max.replace(tzinfo=timezone.utc)
     finals={str(g["id"]):g for g in historical if g.get("id") and valid_final(g,max_time)}
     for g in current:
-        if g.get("status")=="post" and g.get("id") and
+        if (g.get("status")=="post" and g.get("id") and
             g.get("season_phase") in (None,2,"2",3,"3") and
-            valid_final(g,max_time):
+            valid_final(g,max_time)):
             finals[str(g["id"])]=g
     events=sorted(finals.values(),key=lambda x:(x["date"],str(x["id"])))
     by_team=defaultdict(list)
