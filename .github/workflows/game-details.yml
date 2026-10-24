@@ -28,6 +28,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+      - name: Install public NBA HTML parser for offline fixture tests
+        run: python3 -m pip install --disable-pip-version-check 'beautifulsoup4>=4.12,<5'
       - name: Fetch attributable news headlines (not X posts)
         run: python3 scripts/collect_news.py
       - name: Refresh prior-season PBP Stats efficiency (24h cache)
