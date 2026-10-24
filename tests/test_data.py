@@ -61,9 +61,23 @@ class DataTests(unittest.TestCase):
   html=(ROOT/"index.html").read_text()
   js=(ROOT/"research-dashboard.js").read_text()
   self.assertIn('id="pl-market-coverage"',html)
-  self.assertIn("實際獨贏賠率",js)
-  self.assertIn("實際讓分賠率",js)
-  self.assertIn("實際大小分賠率",js)
+  self.assertIn('id="pl-tw-odds"',html)
+  self.assertIn("台灣運彩盤實際十進位賠率",js)
+  self.assertIn("國際盤賠率",js)
+  self.assertIn('data/tw_odds.json',js)
+ def test_taiwan_market_time_and_join_provenance(self):
+  p=ROOT/"data/tw_odds.json"
+  if not p.exists():self.skipTest("First Taiwan public market collection pending")
+  d=json.loads(p.read_text())
+  self.assertEqual(d.get("pregame_matches"),len(d.get("games",[])))
+  self.assertLessEqual(d.get("complete_pregame",0),d["pregame_matches"])
+  for x in d.get("games",[]):
+   self.assertTrue(x.get("join_verified"))
+   self.assertTrue(x.get("eligible_for_pregame_backtest"))
+   self.assertTrue(x.get("source_url","").startswith("https://www.playsport.cc/"))
+   observed=datetime.datetime.fromisoformat(x["observed_at_utc"])
+   tip=datetime.datetime.fromisoformat(x["tipoff_utc"].replace("Z","+00:00"))
+   self.assertLess(observed,tip)
  def test_playsport_status_is_not_misrepresented(self):
   p=ROOT/"data/playsport_status.json"
   if not p.exists():self.skipTest("First probe pending")
