@@ -188,7 +188,12 @@
         const stats=d.analyst_validation||{};
         const m=typeof stats.margin_mae==="number"?stats.margin_mae.toFixed(2):"—";
         const t=typeof stats.total_mae==="number"?stats.total_mae.toFixed(2):"—";
-        $("model-score-mae").textContent="2025–26比分預測測試：分差MAE "+m+"分（"+(stats.holdout_margin_n||0)+"場），總分MAE "+t+"分（"+(stats.holdout_total_n||0)+"場）。歷史盤口不完整，無法驗證ATS或大／小分命中率。";
+        const pure=typeof stats.ablation_holdout_elo_only_mae==="number"?stats.ablation_holdout_elo_only_mae.toFixed(2):"—";
+        const naive=typeof stats.ablation_holdout_total_naive_league_mae==="number"?stats.ablation_holdout_total_naive_league_mae.toFixed(2):"—";
+        const ci=stats.ablation_total_vs_league_day_cluster_ci95;
+        const interval=Array.isArray(ci)?"，日期區塊95%CI ["+ci[0]+", "+ci[1]+"]":"";
+        const verdict=typeof stats.ablation_margin_selected_vs_elo_mae_improvement==="number"?(stats.ablation_margin_selected_vs_elo_mae_improvement>0?"較純Elo誤差較低":"尚未勝過純Elo"):"優劣未知";
+        $("model-score-mae").textContent="2025–26時序驗證（"+(stats.holdout_margin_n||0)+"場）：混合分差MAE "+m+"分／純Elo "+pure+"分（"+verdict+"）。總分MAE "+t+"分／單純聯盟均值 "+naive+"分，改善"+(stats.ablation_total_vs_league_mae_improvement??"—")+"分"+interval+"。仍缺歷史時間戳盤口，不能驗證讓分或大小分投注報酬。";
      }
      marketOverview(g.market_snapshots,g.odds_discovery);
      sources(d,p);
