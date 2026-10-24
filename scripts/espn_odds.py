@@ -118,6 +118,10 @@ def validate_quote(quote,home,away):
             signed=float(value)*(-1 if sign=="-" else 1)
             if normalize_team(name)==normalize_team(home):details_line=signed
             elif normalize_team(name)==normalize_team(away):details_line=-signed
+            else:
+                quote["invalid_reason"]="named_favorite_does_not_match_game"
+                quote["home_spread_verified"]=None
+                return quote
     if home_line is not None and details_line is not None and abs(home_line-details_line)>.011:
         quote["invalid_reason"]="home_line_disagrees_with_named_favorite"
         quote["home_spread_verified"]=None
