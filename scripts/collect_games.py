@@ -190,7 +190,7 @@ now=dt.datetime.now(UTC).isoformat()
     "method":"eFG%, 3PA rate, TO% and approximate possessions from actual box scores; not official pace",
     "rows":box_samples,"sample_count":len(box_samples),
     "note":"Market analysis only uses box score games before the future tipoff"
-},ensure_ascii=False,separators=(",",":"))+"\\n")
+},ensure_ascii=False,separators=(",",":"))+"\n")
 snapshot={"odds_discovery":odds_discovery,"odds_observations":odds_observations,"normalized_markets":normalized_markets,"market_snapshots":market_snapshots,"captured_at":now,"source":"ESPN public scoreboard and summary endpoints","games":games,"details":details,"errors":errors}
 (ROOT/"games.json").write_text(json.dumps(snapshot,ensure_ascii=False,separators=(",",":"))+"\n")
 # League-wide public injury report; empty/failed data is never presented as healthy.
@@ -231,7 +231,7 @@ except Exception as exc:
     "forecasts":analyst_forecasts,
     "source":"ESPN scored historical games; no historical sportsbook odds were used",
     "market_cover_brier":None,"market_total_brier":None
-},ensure_ascii=False,separators=(",",":"))+"\\n")
+},ensure_ascii=False,separators=(",",":"))+"\n")
 # Generate one 100–200 character three-market Chinese report per future game.
 # Keep reports separate from source price snapshots for provenance and auditing.
 now_reports=dt.datetime.now(UTC).isoformat()
