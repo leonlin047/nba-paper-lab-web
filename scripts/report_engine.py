@@ -105,7 +105,12 @@ def summary(game,forecast,market,total,analysis=None):
     line=market_spread.get("home_line") if isinstance(market_spread,dict) else None
     cover=spread.get("home") if spread else None
     if isinstance(line,(int,float)) and isinstance(cover,(int,float)):
-        second=f"讓分：主{line:+g}分，試算過盤{pct(cover)}；"
+        expected=(analysis or {}).get("projection") or {}
+        em=expected.get("expected_margin")
+        if isinstance(em,(int,float)):
+            second=f"讓分：主{line:+g}、模型淨勝{em:+.1f}，過盤{pct(cover)}；"
+        else:
+            second=f"讓分：主{line:+g}，試算過盤{pct(cover)}；"
     elif isinstance(line,(int,float)):
         second=f"讓分：主{line:+g}分，分差模型證據不足；"
     else:
@@ -120,7 +125,7 @@ def summary(game,forecast,market,total,analysis=None):
     prop=(analysis or {}).get("total") or {}
     over=prop.get("over")
     if isinstance(total_line,(int,float)) and isinstance(over,(int,float)):
-        third=f"大小：盤{total_line:g}、模型{estimate['expected_total']:g}，大分{pct(over)}；"
+        third=f"大小：盤{total_line:g}、預估{estimate['expected_total']:.1f}（差{estimate['expected_total']-total_line:+.1f}），大分{pct(over)}；"
     elif isinstance(total_line,(int,float)):
         third=f"大小：盤{total_line:g}，總分模型尚缺校準；"
     elif estimate:
