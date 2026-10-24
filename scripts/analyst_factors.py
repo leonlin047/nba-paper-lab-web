@@ -138,6 +138,13 @@ def extract_four_factors(summary,event_id,captured_at):
            "quality":"observed_boxscore_derived_approximate",
            "method":"FGA-OREB+TO+0.44*FTA approximate possessions",
            "source":"ESPN completed-game boxscore"})
+    # True four-factor OREB% needs the opponent's defensive rebounding count.
+    if len(samples)==2:
+        for i in (0,1):
+            team=samples[i]
+            other=samples[1-i]
+            chances=team["oreb"]+other["dreb"]
+            team["oreb_pct"]=round(team["oreb"]/chances*100,1) if chances else None
     return samples
 
 def matchup_box_factors(game,box_samples,max_days=40):
@@ -157,6 +164,7 @@ def matchup_box_factors(game,box_samples,max_days=40):
              "three_point_attempt_rate":round(mean(x["three_point_attempt_rate"] for x in recent),1) if len(recent)>=3 else None,
              "turnover_per_est_poss_pct":round(mean(x["turnover_per_est_poss_pct"] for x in recent),1) if len(recent)>=3 else None,
              "free_throw_attempt_rate":round(mean(x["free_throw_attempt_rate"] for x in recent),1) if len(recent)>=3 else None,
+             "oreb_pct":round(mean(x["oreb_pct"] for x in recent if x.get("oreb_pct") is not None),1) if len([x for x in recent if x.get("oreb_pct") is not None])>=3 else None,
              "source":"ESPN summary completed game team box statistics",
              "quality":"insufficient_n" if len(recent)<3 else "observed_approximate"}
     return out
