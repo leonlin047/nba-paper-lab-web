@@ -11,6 +11,7 @@ from __future__ import annotations
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from math import isfinite, log, sqrt
+from random import Random
 from statistics import NormalDist, mean, pstdev
 
 from analyst_factors import canon,when,valid_final
@@ -73,6 +74,18 @@ def eligible_league(league_games,tip):
     window_start=tip-timedelta(days=365)
     out=[x for x in league_games[-150:] if window_start<=when(x["date"])<tip]
     return out[-100:]
+
+def paired_bootstrap_ci(differences,iterations=500):
+    """Fixed-seed paired bootstrap, improvement >0 implies lower absolute error."""
+    n=len(differences)
+    if n<100:return None
+    rng=Random(20261024)
+    values=[]
+    for _ in range(iterations):
+        values.append(sum(differences[rng.randrange(n)] for j in range(n))/n)
+    values.sort()
+    return [round(values[int(.025*(iterations-1))],3),
+            round(values[int(.975*(iterations-1))],3)]
 
 def evaluate_and_project(historical,current,predictions):
     """Score model is train-calibrated on seasons<=2025, tested on 2025-26.
@@ -147,7 +160,19 @@ def evaluate_and_project(historical,current,predictions):
         weight=BLEND_ELO
     margin_sd=max(8.0,min(28.0,pstdev(train_margin_errors))) if len(train_margin_errors)>150 else None
     total_sd=max(12.0,min(40.0,pstdev(train_total_errors))) if len(train_total_errors)>150 else None
+    elo_better_deltas=[
+        abs(e-y)-abs(weight*e+(1-weight)*f-y)
+        for e,f,y in holdout_margin_components]
+    total_better_deltas=[
+        abs(naive)-abs(model)
+        for naive,model in zip(holdout_naive_totals,holdout_total)]
     metrics={
+        "ablation_margin_selected_vs_elo_mae_improvement":
+            round(mean(elo_better_deltas),3) if elo_better_deltas else None,
+        "ablation_margin_vs_elo_paired_ci95":paired_bootstrap_ci(elo_better_deltas),
+        "ablation_total_vs_league_mae_improvement":
+            round(mean(total_better_deltas),3) if total_better_deltas else None,
+        "ablation_total_vs_league_paired_ci95":paired_bootstrap_ci(total_better_deltas),
         "method":"chronological rolling score projection; margin blend selected on earlier training seasons",
         "selected_elo_margin_weight_from_training":weight,
         "candidate_elo_margin_weights":weight_grid,
