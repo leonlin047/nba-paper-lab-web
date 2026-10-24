@@ -182,7 +182,19 @@ for item in market_snapshots:
             "home_spread_american","away_spread_american",
             "over_american","under_american"))):
         complete_market_events.add(str(item["event_id"]))
+coverage_asof=dt.datetime.now(UTC)
+near_term=[]
+for event in games:
+    if event.get("status")!="pre":continue
+    try:
+        when=dt.datetime.fromisoformat(str(event.get("date")).replace("Z","+00:00"))
+        if coverage_asof<=when<coverage_asof+dt.timedelta(hours=24):
+            near_term.append(str(event["id"]))
+    except (ValueError,TypeError):pass
 market_coverage_report={
+    "next_24h_game_count":len(near_term),
+    "next_24h_complete_three_market_events":len(set(near_term)&complete_market_events),
+    "as_of_utc":coverage_asof.isoformat(),
     "future_game_count":sum(g.get("status")=="pre" for g in games),
     "paired_market_events":len({str(q["event_id"]) for q in market_snapshots}),
     "complete_three_market_events":len(complete_market_events),
