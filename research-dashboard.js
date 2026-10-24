@@ -25,14 +25,36 @@
     spread:{home_line:null,away_line:null,details:q.details,home_cover_probability_experimental:null,away_cover_probability_experimental:null},
     total:{line:q.over_under}};
  }
- function predictions(rows,meta,markets,raw,reports){
+ function domesticMarket(q){
+   if(!q||!q.join_verified||!q.eligible_for_pregame_backtest)return null;
+   const ml=q.moneyline||{},sp=q.spread||{},tot=q.total||{},est=q.model_estimates||{},nv=ml.no_vig_probabilities||{};
+   return {event_id:q.event_id,home:q.home,away:q.away,
+     provider:"玩運彩（台灣運彩盤第三方整理）",source_id:"tw_playsport",
+     captured_at_utc:q.observed_at_utc,source_url:q.source_url,
+     rights_status:"review",is_domestic:true,
+     moneyline:{home_decimal:ml.home_decimal,away_decimal:ml.away_decimal,
+       home_no_vig_probability:nv.home??null,away_no_vig_probability:nv.away??null},
+     spread:{home_line:sp.home_line,away_line:sp.away_line,
+       home_decimal:sp.home_decimal,away_decimal:sp.away_decimal,
+       home_cover_probability_experimental:est.home_spread_cover_probability_experimental??null,
+       away_cover_probability_experimental:est.away_spread_cover_probability_experimental??null},
+     total:{line:tot.line,over_decimal:tot.over_decimal,under_decimal:tot.under_decimal,
+       expected_total:est.expected_total??null,
+       over_probability_experimental:est.total_over_probability_experimental??null,
+       under_probability_experimental:est.total_under_probability_experimental??null}
+   };
+ }
+ function predictions(rows,meta,markets,raw,reports,taiwan){
    const box=$("pl-predictions");box.replaceChildren();
    if(!Array.isArray(rows)||!rows.length){box.append(gauge(null),elt("p","pl-muted","暫無有效的賽前模型快照。"));return}
    const byId=new Map((markets||[]).map(m=>[String(m.event_id),m]));
    const byReport=new Map((reports||[]).map(m=>[String(m.event_id),m]));
+   const byTaiwan=new Map((taiwan||[]).map(m=>[String(m.event_id),m]));
    const older=new Map((raw||[]).map(m=>[String(m.event_id),m]));
    for(const game of rows){
-     const market=byId.get(String(game.event_id))||oldMarket(older.get(String(game.event_id)),game,game.home_win_probability);
+     const international=byId.get(String(game.event_id))||oldMarket(older.get(String(game.event_id)),game,game.home_win_probability);
+     const local=domesticMarket(byTaiwan.get(String(game.event_id)));
+     const market=local||international;
      const report=byReport.get(String(game.event_id));
      const card=elt("article","pl-panel"),select=elt("select");card.append(elt("strong","",(window.NbaZh?window.NbaZh.teamShort(game.away):safe(game.away))+" 對 "+(window.NbaZh?window.NbaZh.teamShort(game.home):safe(game.home))));
      const started=game.date?new Date(game.date).getTime()<=Date.now():false;
