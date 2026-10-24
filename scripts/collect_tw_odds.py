@@ -206,6 +206,33 @@ def main():
     if successful==0:
         raise SystemExit("Both public pages unavailable; keep previous verified data")
     matched=match_espn(collected,games)
+    # The model is a separate forecast, NOT the actual Taiwanese bookmaker
+    # price. Attach only forecast probabilities computed before the tipoff.
+    analyst=load_json(ROOT/"analyst_validation.json")
+    forecasts=analyst.get("forecasts") or {}
+    model_at=analyst.get("updated_at_utc")
+    model_time=None
+    try:model_time=dt.datetime.fromisoformat(str(model_at).replace("Z","+00:00"))
+    except (ValueError,TypeError):pass
+    if isinstance(forecasts,dict) and model_time is not None:
+        from score_model import market_probabilities
+        for row in matched:
+            tip=dt.datetime.fromisoformat(row["tipoff_utc"].replace("Z","+00:00"))
+            forecast=forecasts.get(row["event_id"])
+            if not row["eligible_for_pregame_backtest"] or not forecast or model_time>=tip:
+                continue
+            market={"spread":{"home_line":row["spread"]["home_line"]},
+                "total":{"line":row["total"]["line"]}}
+            estimates=market_probabilities(forecast,market)
+            row["model_estimates"]={
+                "home_spread_cover_probability_experimental":(estimates.get("spread") or {}).get("home"),
+                "away_spread_cover_probability_experimental":(estimates.get("spread") or {}).get("away"),
+                "total_over_probability_experimental":(estimates.get("total") or {}).get("over"),
+                "total_under_probability_experimental":(estimates.get("total") or {}).get("under"),
+                "expected_margin":forecast.get("expected_margin"),
+                "expected_total":forecast.get("expected_total"),
+                "model_as_of_utc":model_at,
+                "status":"experimental_not_calibrated_on_historical_TW_odds"}
     future=[x for x in matched if x["eligible_for_pregame_backtest"]]
     # Durable first/last genuine pre-tipoff observations per event.
     old=load_json(HISTORY)
@@ -230,6 +257,7 @@ def main():
         "source_games_parsed":len(collected),"matched":len(matched),
         "pregame_matches":len(future),
         "complete_pregame":sum(x["complete_markets"]==3 for x in future),
+        "with_fresh_model":sum("model_estimates" in x for x in future),
         "games":future,"errors":errors,
         "notes":"只將觀測早於開賽的賽事標為賽前；使用來源實際數值及時間；不推定開盤、收盤、投注推薦或所有盤皆可下注"}
     OUT.write_text(json.dumps(latest,ensure_ascii=False,separators=(",",":"))+"\n")
