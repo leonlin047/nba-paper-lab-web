@@ -10,6 +10,8 @@ from __future__ import annotations
 import datetime as dt
 import math
 from statistics import NormalDist, pstdev
+from analyst_factors import matchup_form,matchup_box_factors,injuries_by_matchup
+from score_model import market_probabilities
 
 NORMAL=NormalDist()
 TEAM_ZH={
@@ -84,36 +86,67 @@ def model_total(future,completed,market_line):
         "away_sample_size":len(away_games),
         "method":"shrunk team for/against + league total variance; experimental, not calibrated"}
 
-def summary(game,forecast,market,total):
+def summary(game,forecast,market,total,analysis=None):
+    """Evidence-based analyst observation; absence of observed evidence is explicit."""
     away,home=team(game["away"]),team(game["home"])
     p=forecast.get("home_win_probability")
-    start=f"{away}對{home}｜獨贏：十季Elo估主隊{pct(p)}、客隊{pct(1-p) if isinstance(p,(int,float)) else '—'}，僅屬試驗基準。"
-    spread=market.get("spread") if market else None
-    line=spread.get("home_line") if isinstance(spread,dict) else None
-    cover=spread.get("home_cover_probability_experimental") if isinstance(spread,dict) else None
-    if isinstance(line,(int,float)) and cover is not None:
-        second=f"讓分：觀測主隊{line:+g}分，試驗過盤{pct(cover)}；分差波動採固定假設，未經校準。"
+    factors=(analysis or {}).get("form") or {}
+    hf,af=factors.get("home") or {},factors.get("away") or {}
+    def form_margin(f):
+        value=f.get("avg_margin")
+        return f"{value:+g}" if isinstance(value,(int,float)) else "—"
+    if hf.get("n") and af.get("n"):
+        context=f"近{hf['n']}/{af['n']}場淨勝分主{form_margin(hf)}、客{form_margin(af)}。"
+    else:
+        context="近期樣本不足，不以猜測補上實力差。"
+    start=f"{away}對{home}｜獨贏：十季Elo主{pct(p)}、客{pct(1-p) if isinstance(p,(int,float)) else '—'}；{context}"
+    spread=(analysis or {}).get("spread") or {}
+    market_spread=market.get("spread") if market else None
+    line=market_spread.get("home_line") if isinstance(market_spread,dict) else None
+    cover=spread.get("home") if spread else None
+    if isinstance(line,(int,float)) and isinstance(cover,(int,float)):
+        second=f"讓分：主{line:+g}分，試算過盤{pct(cover)}；"
     elif isinstance(line,(int,float)):
-        second=f"讓分：觀測主隊{line:+g}分，但缺少可驗證分差模型，過盤機率暫不提供。"
+        second=f"讓分：主{line:+g}分，分差模型證據不足；"
     else:
-        second="讓分：目前沒有可核對的實際盤口，不能計算對應過盤機率。"
-    mtotal=market.get("total") if market else None
-    total_line=mtotal.get("line") if isinstance(mtotal,dict) else None
-    if total and isinstance(total_line,(int,float)):
-        over=total.get("over_probability_experimental")
-        if over is not None:
-            third=f"大小：盤口{total_line:g}分，試算總分{total['expected_total']:g}，大分{pct(over)}；只用近期樣本。"
-        else:
-            third=f"大小：盤口{total_line:g}分，但有效得分樣本不足，大、小分機率暫不提供。"
-    elif total:
-        third=f"大小：試算總分{total['expected_total']:g}分，但無真實大小分門檻，無法判斷大、小分過盤率。"
+        second="讓分：無可驗證盤口，不估過盤率；"
+    if hf.get("n") and af.get("n"):
+        resth,resta=hf.get("rest_days"),af.get("rest_days")
+        if isinstance(resth,(int,float)) and isinstance(resta,(int,float)):
+            second+=f"雙方休息{resth:g}/{resta:g}天，未假設固定疲勞效果。"
+    total_market=market.get("total") if market else None
+    total_line=total_market.get("line") if isinstance(total_market,dict) else None
+    estimate=(analysis or {}).get("projection") or {}
+    prop=(analysis or {}).get("total") or {}
+    over=prop.get("over")
+    if isinstance(total_line,(int,float)) and isinstance(over,(int,float)):
+        third=f"大小：盤{total_line:g}、模型{estimate['expected_total']:g}，大分{pct(over)}；"
+    elif isinstance(total_line,(int,float)):
+        third=f"大小：盤{total_line:g}，總分模型尚缺校準；"
+    elif estimate:
+        third=f"大小：模型預估{estimate['expected_total']:g}分，但缺真實盤口；"
     else:
-        third="大小：近期得分資料或實際總分盤不足，無法可靠推算大、小分機率。"
-    caution="賽前請再核對傷病、確認先發與盤口時間；X記者消息尚未自動核實。所有數值均非已驗證優勢，僅供紙上研究。"
-    report=start+second+third+caution
-    if not 100<=len(report)<=200:
-        raise ValueError(f"Report length invalid {len(report)} for {game.get('id')}: {report}")
-    return report
+        third="大小：近期得分樣本不足，暫不提供預估；"
+    if hf.get("n") and af.get("n"):
+        third+=f"近況場均得分主{hf.get('avg_scored','—')}/客{af.get('avg_scored','—')}。"
+    injury=(analysis or {}).get("injuries") or {}
+    if injury.get("available") and injury.get("fresh"):
+        x=injury.get("rows",[])
+        caution=f"傷病通報{len(x)}筆，未量化球員上場影響；讓分與大小僅為試驗估計。"
+    else:
+        caution="傷病及先發資訊尚未核實；讓分與大小僅為試驗估計，非投注建議。"
+    text=start+second+third+caution
+    if len(text)>200:
+        # Preserve real numbers and observations before dropping repetitive cautions.
+        caution="傷兵影響與盤口變動尚未量化。"
+        text=start+second+third+caution
+    if len(text)>200:
+        text=start+second+third
+    if len(text)<100:
+        text+="缺少的來源需等賽前驗證，不能把報導推測視為球員確定出賽或量化優勢。"
+    if not 100<=len(text)<=200:
+        raise ValueError(f"Report length invalid {len(text)} for {game.get('id')}: {text}")
+    return text
 
 def relevant_reporting(game,articles):
     """Attach up to three earlier newsroom headlines, never social rumors.
@@ -140,7 +173,7 @@ def relevant_reporting(game,articles):
     links.sort(key=lambda a:a["published_at_utc"],reverse=True)
     return links[:3]
 
-def build_reports(games,predictions,markets,now,historical_games=None,articles=None):
+def build_reports(games,predictions,markets,now,historical_games=None,articles=None,analyst_forecasts=None,box_samples=None,injury_snapshot=None):
     finals=[g for g in games if g.get("status")=="post"
         and isinstance(g.get("home_score"),int) and isinstance(g.get("away_score"),int)]
     # Historical outcomes are permitted only when genuinely scored and dated.
@@ -162,19 +195,46 @@ def build_reports(games,predictions,markets,now,historical_games=None,articles=N
         m=by_id.get(id_)
         tline=m.get("total",{}).get("line") if m else None
         total=model_total(g,finals,tline)
+        form=matchup_form(g,finals)
+        box_factors=matchup_box_factors(g,box_samples or [])
+        injury=injuries_by_matchup(g,injury_snapshot or {})
+        projection=(analyst_forecasts or {}).get(id_)
+        market_probs=market_probabilities(projection,m)
+        analysis={"form":form,"box_four_factors":box_factors,
+           "injuries":injury,"projection":projection,
+           "spread":market_probs.get("spread"),
+           "total":market_probs.get("total"),
+           "market_observation": {"provider":m.get("provider"),
+               "captured_at_utc":m.get("captured_at_utc"),
+               "rights_status":m.get("rights_status")} if m else None,
+           "causality_disclaimer":"近期得分、休息與對戰紀錄為相關因素，非已驗證因果效果"}
+        spread=m.get("spread").copy() if m and m.get("spread") else None
+        if spread and market_probs.get("spread"):
+            spread["home_cover_probability_experimental"]=market_probs["spread"]["home"]
+            spread["away_cover_probability_experimental"]=market_probs["spread"]["away"]
+            spread["method"]="Chronological score projection, residual sigma fitted on 2022–25; not ATS calibrated"
+        total_row={"line":tline,**total} if total else {"line":tline,
+            "over_probability_experimental":None,"under_probability_experimental":None}
+        if market_probs.get("total") and projection:
+            total_row.update({
+              "expected_total":projection["expected_total"],
+              "total_sd":projection["total_sigma"],
+              "over_probability_experimental":market_probs["total"]["over"],
+              "under_probability_experimental":market_probs["total"]["under"],
+              "whole_point_push_possible":market_probs["total"]["push_possible"],
+              "method":"Empirical residual sigma on earlier seasons; holdout scores evaluated, not O/U odds calibrated"})
         row={"event_id":id_,"date":g.get("date"),"home":g["home"],"away":g["away"],
              "home_zh":team(g["home"]),"away_zh":team(g["away"]),
              "markets":{
                 "moneyline":{"home_probability_experimental":pred.get("home_win_probability"),
                              "away_probability_experimental":round(1-pred["home_win_probability"],5)
                              if isinstance(pred.get("home_win_probability"),(int,float)) else None},
-                "spread":m.get("spread") if m else None,
-                "total":{"line":tline,**total} if total else {"line":tline,
-                      "over_probability_experimental":None,"under_probability_experimental":None}},
+                "spread":spread,
+                "total":total_row},
              "observed_market":m is not None,
              "news_verified":False,"related_reporting":relevant_reporting(g,articles),
-             "model_validated":False,
-             "report_zh":summary(g,pred,m,total),
+             "model_validated":False,"analyst":analysis,
+             "report_zh":summary(g,pred,m,total,analysis),
              "generated_at_utc":now}
         out.append(row)
     return out
