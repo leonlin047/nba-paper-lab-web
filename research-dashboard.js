@@ -87,6 +87,13 @@
      select.addEventListener("change",repaint);card.append(select,view);repaint();
      const overview=elt("p","pl-muted");
      const homeProb=game.home_win_probability;
+     const quotes=market&&market.observed_prices||{};
+     const observed=market&&market.provider?
+        "國際盤："+market.provider+" · 獨贏主／客 "+american(market.moneyline&&market.moneyline.home_american)+" / "+american(market.moneyline&&market.moneyline.away_american)+
+        " · 讓分主 "+safe(market.spread&&market.spread.home_line)+"（"+american(quotes.spread_home_american)+"）"+
+        " · 大小 "+safe(market.total&&market.total.line)+"（大"+american(quotes.total_over_american)+"／小"+american(quotes.total_under_american)+"）":
+        "本場未取得真實盤口；模型機率不是莊家報價。";
+     card.append(elt("p","pl-muted",observed));
      const cover=market&&market.spread?market.spread.home_cover_probability_experimental:null;
      const total=report&&report.markets?report.markets.total:null;
      overview.textContent="三市場總覽 · 主隊獨贏 "+fmt(num(homeProb))+"｜主隊過盤 "+fmt(num(cover))+"｜大分 "+fmt(num(total&&total.over_probability_experimental));
@@ -175,13 +182,17 @@
    const box=$("pl-odds");box.replaceChildren();
    const entries=markets&&markets.length?markets:(raw||[]).map(x=>oldMarket(x));
    if(!entries.length){box.append(elt("p","pl-muted","尚未取得可驗證的國際／台灣盤口。"));return}
-   box.append(elt("p","pl-muted","下列為觀測到的國際盤口，不是台灣運彩報價；不同來源不得直接混用。"));
+   box.append(elt("p","pl-muted","以下為實際觀測到的國際盤口（美式賠率），不是台灣運彩報價。沒列出的場次代表尚無有效盤口。"));
    for(const m of entries){
      const c=elt("article","pl-panel"),x=m.moneyline||{},s=m.spread||{};
      c.append(elt("strong","",(window.NbaZh?window.NbaZh.teamShort(m.away):safe(m.away||"客隊"))+" 對 "+(window.NbaZh?window.NbaZh.teamShort(m.home):safe(m.home||"主隊"))+" · "+safe(m.provider)));
      c.append(elt("p","pl-muted","獨贏 主／客："+safe(x.home_american)+" / "+safe(x.away_american)+"（美式）"));
      c.append(elt("p","pl-muted","去水隱含機率 主／客："+fmt(num(x.home_no_vig_probability))+" / "+fmt(num(x.away_no_vig_probability))));
-     c.append(elt("p","pl-muted","讓分："+safe(s.details)+" · 大小："+safe(m.total&&m.total.line)));
+     const prices=m.observed_prices||{},total=m.total||{};
+     c.append(elt("p","pl-muted","讓分主／客："+safe(s.home_line)+" / "+safe(s.away_line)+
+       " · 賠率 "+american(prices.spread_home_american)+" / "+american(prices.spread_away_american)));
+     c.append(elt("p","pl-muted","大小分："+safe(total.line)+" · 大／小賠率 "+
+       american(prices.total_over_american)+" / "+american(prices.total_under_american)));
      c.append(elt("p","pl-muted","觀測時間："+time(m.captured_at_utc)));
      box.append(c);
    }
@@ -212,6 +223,13 @@
         const interval=Array.isArray(ci)?"，日期區塊95%CI ["+ci[0]+", "+ci[1]+"]":"";
         const verdict=typeof stats.ablation_margin_selected_vs_elo_mae_improvement==="number"?(stats.ablation_margin_selected_vs_elo_mae_improvement>0?"較純Elo誤差較低":"尚未勝過純Elo"):"優劣未知";
         $("model-score-mae").textContent="2025–26時序驗證（"+(stats.holdout_margin_n||0)+"場）：混合分差MAE "+m+"分／純Elo "+pure+"分（"+verdict+"）。總分MAE "+t+"分／單純聯盟均值 "+naive+"分，改善"+(stats.ablation_total_vs_league_mae_improvement??"—")+"分"+interval+"。仍缺歷史時間戳盤口，不能驗證讓分或大小分投注報酬。";
+     }
+     const coverage=g.market_coverage||d.market_coverage||{};
+     if($("pl-market-coverage")){
+       const paired=coverage.paired_market_events??(g.market_snapshots||[]).length;
+       const future=coverage.future_game_count??(d.predictions||[]).length;
+       const complete=coverage.complete_three_market_events;
+       $("pl-market-coverage").textContent="實際國際盤口："+paired+"/"+future+"場配對，三市場完整"+(complete===undefined?"待驗收":complete)+"場；台灣運彩目前仍為0場。缺少盤口不會補模型猜測值。";
      }
      marketOverview(g.market_snapshots,g.odds_discovery);
      sources(d,p);
