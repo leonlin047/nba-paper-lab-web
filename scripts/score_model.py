@@ -87,6 +87,23 @@ def paired_bootstrap_ci(differences,iterations=500):
     return [round(values[int(.025*(iterations-1))],3),
             round(values[int(.975*(iterations-1))],3)]
 
+def paired_day_cluster_ci(differences,game_dates,iterations=400):
+    """Bootstrap whole calendar days to retain game-day correlation."""
+    if len(differences)!=len(game_dates) or len(differences)<100:return None
+    groups={}
+    for delta,date in zip(differences,game_dates):
+        groups.setdefault(str(date)[:10],[]).append(delta)
+    keys=list(groups)
+    if len(keys)<40:return None
+    rng=Random(20261024)
+    estimates=[]
+    for _ in range(iterations):
+        sample=[groups[keys[rng.randrange(len(keys))]] for k in keys]
+        estimates.append(sum(sum(day) for day in sample)/sum(len(day) for day in sample))
+    estimates.sort()
+    return [round(estimates[int(.025*(iterations-1))],3),
+            round(estimates[int(.975*(iterations-1))],3)]
+
 def evaluate_and_project(historical,current,predictions):
     """Score model is train-calibrated on seasons<=2025, tested on 2025-26.
     Calibrate sigma on historical score residuals without using holdout outcomes.
@@ -108,6 +125,7 @@ def evaluate_and_project(historical,current,predictions):
     train_margin_components=[]
     holdout_margin_components=[]
     holdout_naive_totals=[]
+    holdout_game_dates=[]
     holdout_margin=[]
     holdout_total=[]
     holdout_winner_probs=[]
@@ -137,6 +155,7 @@ def evaluate_and_project(historical,current,predictions):
                 holdout_margin.append(err_margin)
                 holdout_total.append(err_total)
                 holdout_naive_totals.append(projection["league_avg_total"]-total)
+                holdout_game_dates.append(g["date"])
                 if components[0] is not None:holdout_margin_components.append(components)
         # Full-season Elo win baseline evaluated separately in elo_history.py
         if year==HOLDOUT_SEASON_END:
@@ -173,6 +192,9 @@ def evaluate_and_project(historical,current,predictions):
         "ablation_total_vs_league_mae_improvement":
             round(mean(total_better_deltas),3) if total_better_deltas else None,
         "ablation_total_vs_league_paired_ci95":paired_bootstrap_ci(total_better_deltas),
+        "ablation_total_vs_league_day_cluster_ci95":paired_day_cluster_ci(total_better_deltas,holdout_game_dates),
+        "ablation_margin_vs_elo_day_cluster_ci95":paired_day_cluster_ci(elo_better_deltas,holdout_game_dates),
+        "holdout_game_days":len(set(x[:10] for x in holdout_game_dates)),
         "method":"chronological rolling score projection; margin blend selected on earlier training seasons",
         "selected_elo_margin_weight_from_training":weight,
         "candidate_elo_margin_weights":weight_grid,
