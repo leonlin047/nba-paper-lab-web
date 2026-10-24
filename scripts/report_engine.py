@@ -173,7 +173,7 @@ def relevant_reporting(game,articles):
     links.sort(key=lambda a:a["published_at_utc"],reverse=True)
     return links[:3]
 
-def build_reports(games,predictions,markets,now,historical_games=None,articles=None,analyst_forecasts=None,box_samples=None,injury_snapshot=None):
+def build_reports(games,predictions,markets,now,historical_games=None,articles=None,analyst_forecasts=None,box_samples=None,injury_snapshot=None,season_priors=None):
     finals=[g for g in games if g.get("status")=="post"
         and isinstance(g.get("home_score"),int) and isinstance(g.get("away_score"),int)]
     # Historical outcomes are permitted only when genuinely scored and dated.
@@ -200,7 +200,16 @@ def build_reports(games,predictions,markets,now,historical_games=None,articles=N
         injury=injuries_by_matchup(g,injury_snapshot or {})
         projection=(analyst_forecasts or {}).get(id_)
         market_probs=market_probabilities(projection,m)
+        priors=(season_priors or {}).get("teams") or {}
+        aliases={"GS":"GSW","NO":"NOP","NY":"NYK","SA":"SAS","WSH":"WAS","UTAH":"UTA"}
+        prior_home=priors.get(g["home"]) or priors.get(aliases.get(g["home"]))
+        prior_away=priors.get(g["away"]) or priors.get(aliases.get(g["away"]))
+        if int(g.get("season_year") or 2027)!=2027:
+            prior_home=prior_away=None
         analysis={"form":form,"box_four_factors":box_factors,
+           "previous_season_efficiency":{"home":prior_home,"away":prior_away,
+             "source":"PBP Stats previous regular season; not live team performance",
+             "limitations":"Offseason roster changes; prior-season offensive PPP is not a game-day prediction"},
            "injuries":injury,"projection":projection,
            "spread":market_probs.get("spread"),
            "total":market_probs.get("total"),
