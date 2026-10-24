@@ -37,10 +37,16 @@ def team_form(games,abbr,kickoff,limit=12):
     home_rows=[(g,t) for g,t in zip(rows,scoring) if t[2]]
     away_rows=[(g,t) for g,t in zip(rows,scoring) if not t[2]]
     last_time=when(rows[-1]["date"])
-    rest_hours=max(0,round((kickoff-last_time).total_seconds()/3600,1))
-    rest_days=max(0,round((kickoff-last_time).total_seconds()/86400-1,1))
-    # Two games less than 35 hours apart constitutes an approximate back-to-back.
-    b2b=rest_hours<=36
+    hours_gap=max(0,round((kickoff-last_time).total_seconds()/3600,1))
+    offseason_gap=hours_gap>24*14
+    rest_hours=None if offseason_gap else hours_gap
+    rest_days=None if offseason_gap else max(0,round(hours_gap/24-1,1))
+    # Back-to-back only applies to closely spaced real matches.
+    b2b=rest_hours is not None and rest_hours<=36
+    target_year=kickoff.year+1 if kickoff.month>=10 else kickoff.year
+    current_season_n=sum(
+        int(g.get("season_end") or g.get("season_year") or 0)==target_year
+        for g in rows)
     pts=[v[0] for v in scoring]
     conceded=[v[1] for v in scoring]
     margins=[a-b for a,b in zip(pts,conceded)]
@@ -65,7 +71,8 @@ def team_form(games,abbr,kickoff,limit=12):
         "last5_avg_margin":round(mean(last5),1),
         "home":loc(home_rows),"away":loc(away_rows),
         "rest_hours":rest_hours,"rest_days":rest_days,
-        "back_to_back_proxy":b2b
+        "back_to_back_proxy":b2b,
+        "offseason_gap":offseason_gap,"current_season_n":current_season_n
     }
 def matchup_form(game,history):
     kickoff=when(game.get("date"))
