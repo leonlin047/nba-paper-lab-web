@@ -112,7 +112,7 @@ def validate_quote(quote,home,away):
     raw=quote.get("spread")
     details_line=None
     if isinstance(details,str):
-        m=re.fullmatch(r"\\s*([A-Za-z]{2,5})\\s*([+-])\\s*(\\d+(?:\\.\\d+)?)\\s*",details)
+        m=re.fullmatch(r"\s*([A-Za-z]{2,5})\s*([+-])\s*(\d+(?:\.\d+)?)\s*",details)
         if m:
             name,sign,value=m.groups()
             signed=float(value)*(-1 if sign=="-" else 1)
