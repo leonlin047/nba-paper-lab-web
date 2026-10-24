@@ -112,6 +112,7 @@
        if(bh.n>=3&&ba.n>=3){
           section("投籃與控球（實際賽後統計）","主／客eFG% "+fmtCount(bh.eFG_pct)+"／"+fmtCount(ba.eFG_pct)+"；三分出手率 "+fmtCount(bh.three_point_attempt_rate)+"／"+fmtCount(ba.three_point_attempt_rate));
           section("估算回合數與失誤率","主／客估算回合 "+fmtCount(bh.estimated_possessions)+"／"+fmtCount(ba.estimated_possessions)+"；TO% "+fmtCount(bh.turnover_per_est_poss_pct)+"／"+fmtCount(ba.turnover_per_est_poss_pct)+"（非官方Pace）");
+          section("籃板與罰球四要素","主／客OREB% "+fmtCount(bh.oreb_pct)+"／"+fmtCount(ba.oreb_pct)+"，FTA/FGA% "+fmtCount(bh.free_throw_attempt_rate)+"／"+fmtCount(ba.free_throw_attempt_rate));
        }else section("節奏／四要素","目前每隊有效團隊boxscore不足3場；不拿場均得分冒充Pace或攻防效率");
        const p=evidence.projection||{};
        if(typeof p.expected_margin==="number")section("賽前分差／總分模型","預估主隊淨勝"+fmtCount(p.expected_margin)+"分、總分"+fmtCount(p.expected_total)+"分，歷史殘差σ約"+fmtCount(p.margin_sigma)+"/"+fmtCount(p.total_sigma)+"分");
