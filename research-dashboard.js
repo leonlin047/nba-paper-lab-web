@@ -5,6 +5,8 @@
  const elt=(tag,cls,value)=>{const x=document.createElement(tag);if(cls)x.className=cls;if(value!==undefined&&value!==null)x.textContent=String(value);return x};
  const fmt=n=>typeof n==="number"&&Number.isFinite(n)?(n*100).toFixed(1)+"%":"—";
  const num=n=>typeof n==="number"&&Number.isFinite(n)?n:null;
+ const american=v=>typeof v==="number"&&Number.isFinite(v)?(v>0?"+":"")+v:"—";
+ const decimalFromAmerican=v=>typeof v==="number"&&Math.abs(v)>=100?(v>0?1+v/100:1+100/Math.abs(v)).toFixed(2):"—";
  const safe=v=>v===null||v===undefined?"—":String(v);
  const time=t=>t?new Date(t).toLocaleString("zh-TW",{timeZone:"Asia/Taipei"}):"—";
  const risk=meta=>meta&&meta.out_of_sample===true&&meta.sample_size>=200&&typeof meta.brier==="number"?"十季 Elo 獨贏已完成時序驗證":"獨贏模型尚未完成足夠時序驗證";
@@ -50,6 +52,10 @@
          const result=total?(select.value==="total_over"?total.over_probability_experimental:total.under_probability_experimental):null;
          view.append(gauge(num(result)),elt("p","pl-muted",select.value==="total_over"?"大分機率（試驗估計）："+fmt(num(result)):"小分機率（試驗估計）："+fmt(num(result))));
          view.append(elt("p","pl-muted","觀測總分盤："+safe(line)));
+         const quotes=market&&market.observed_prices||{};
+         view.append(elt("p","pl-muted","實際大小分賠率（美式／十進位）· 大 "+
+           american(quotes.total_over_american)+"／"+decimalFromAmerican(quotes.total_over_american)+
+           "，小 "+american(quotes.total_under_american)+"／"+decimalFromAmerican(quotes.total_under_american)));
          if(total&&typeof total.expected_total==="number")view.append(elt("p","pl-muted","近期攻守得分模型預估總分："+total.expected_total+" 分"));
          else view.append(elt("p","pl-muted","得分樣本不足或未取得，不能提供可靠估計。"));
          if(total&&total.whole_point_push_possible)view.append(elt("p","pl-muted","整數盤可能走水，未估計走水機率。"));
@@ -59,15 +65,19 @@
          const cover=s?(home?s.home_cover_probability_experimental:s.away_cover_probability_experimental):null;
          view.append(gauge(num(cover)),elt("p","pl-muted","過盤機率（實驗模型）："+fmt(num(cover))));
          view.append(elt("p","pl-muted","讓分／受讓線："+(line===null||line===undefined?"未確認":(line>0?"+":"")+line)));
+         const q=market&&market.observed_prices||{};
+         const odd=home?q.spread_home_american:q.spread_away_american;
+         view.append(elt("p","pl-muted","實際讓分賠率（美式／十進位）："+american(odd)+"／"+decimalFromAmerican(odd)));
          if(s&&s.details)view.append(elt("p","pl-muted","來源盤口標示："+s.details));
          if(s&&s.whole_point_push_possible)view.append(elt("p","pl-muted","整數盤可能走水：此連續近似模型未估計走水機率。"));
-         view.append(elt("p","pl-muted","固定分差標準差 12 分的常態近似，尚未依歷史數據校準或回測。"));
+         const sigma=report&&report.analyst&&report.analyst.projection&&report.analyst.projection.margin_sigma;
+         view.append(elt("p","pl-muted","歷史比分殘差標準差："+safe(sigma)+"分；尚未以歷史盤口驗證過盤率。"));
        }else{
          view.append(gauge(est),elt("p","pl-muted","Elo 試驗獨贏勝率："+fmt(est)));
          const fair=m?(home?m.home_no_vig_probability:m.away_no_vig_probability):null;
          const odds=m?(home?m.home_american:m.away_american):null;
          view.append(elt("p","pl-muted","市場去水後隱含機率："+fmt(num(fair))));
-         view.append(elt("p","pl-muted","美式獨贏賠率："+safe(odds)));
+         view.append(elt("p","pl-muted","實際獨贏賠率（美式／十進位）："+american(odds)+"／"+decimalFromAmerican(odds)));
        }
        view.append(elt("p","pl-muted",market?"觀測："+safe(market.provider)+" · "+time(market.captured_at_utc):"本場沒有對應的盤口觀測"));
        const stale=market&&market.captured_at_utc&&(Date.now()-Date.parse(market.captured_at_utc)>2*3600000);
