@@ -170,6 +170,27 @@ for q in odds_discovery:
     if event_id not in by_id:continue
     market_snapshots.append(build_market(q,by_id[event_id],forecast_by_id.get(event_id)))
 market_snapshots=list({(m["event_id"],m["provider"]):m for m in market_snapshots}.values())
+complete_market_events=set()
+for item in market_snapshots:
+    quote=selected.get((str(item["event_id"]),item["provider"]))
+    ml=item.get("moneyline") or {}
+    sp=item.get("spread") or {}
+    total=item.get("total") or {}
+    if (quote and ml.get("home_decimal") is not None and ml.get("away_decimal") is not None
+        and sp.get("home_line") is not None and total.get("line") is not None
+        and all(quote.get(field) is not None for field in (
+            "home_spread_american","away_spread_american",
+            "over_american","under_american"))):
+        complete_market_events.add(str(item["event_id"]))
+market_coverage_report={
+    "future_game_count":sum(g.get("status")=="pre" for g in games),
+    "paired_market_events":len({str(q["event_id"]) for q in market_snapshots}),
+    "complete_three_market_events":len(complete_market_events),
+    "scoreboard_quotes_detected":len(scoreboard_odds),
+    "source":"ESPN scoreboard embedded odds + game summary",
+    "taiwan_sportslottery_connected":False,
+    "rights_status":"review"
+}
 for m in market_snapshots:
     projection=analyst_forecasts.get(str(m["event_id"]))
     conditional=market_probabilities(projection,m)
@@ -190,7 +211,8 @@ for m in market_snapshots:
           "total_over_american":original.get("over_american"),
           "total_under_american":original.get("under_american")}
         m["provider_open_last"]=original.get("provider_open_last")
-        m["market_note"]="provider open/latest fields have no assured chronological update timestamp; never backtest them as pregame known without archived snapshots"
+        m["source_endpoint"]=original.get("source_endpoint")
+        m["market_note"]="Only observation capture time is verified; provider open/close labels lack per-change times. Not Taiwan lottery."
 # Add box scores for most recent final games, limiting provider load.
 finals=[g for g in games if g["status"]=="post" and g["date"] and g["date"][:10]>=str(today-dt.timedelta(days=3))]
 details=[]
@@ -224,7 +246,7 @@ now=dt.datetime.now(UTC).isoformat()
     "rows":box_samples,"sample_count":len(box_samples),
     "note":"Market analysis only uses box score games before the future tipoff"
 },ensure_ascii=False,separators=(",",":"))+"\n")
-snapshot={"odds_discovery":odds_discovery,"odds_observations":odds_observations,"normalized_markets":normalized_markets,"market_snapshots":market_snapshots,"captured_at":now,"source":"ESPN public scoreboard and summary endpoints","games":games,"details":details,"errors":errors}
+snapshot={"market_coverage":market_coverage_report,"odds_discovery":odds_discovery,"odds_observations":odds_observations,"normalized_markets":normalized_markets,"market_snapshots":market_snapshots,"captured_at":now,"source":"ESPN public scoreboard and summary endpoints","games":games,"details":details,"errors":errors}
 (ROOT/"games.json").write_text(json.dumps(snapshot,ensure_ascii=False,separators=(",",":"))+"\n")
 # League-wide public injury report; empty/failed data is never presented as healthy.
 injury_snapshot={"captured_at":now,"source":"ESPN NBA league injuries","injuries":[],"errors":[]}
@@ -292,6 +314,6 @@ reports=build_reports(games,predictions,market_snapshots,now_reports,
     "market_data_rights":"來源資料授權待確認；僅展示自製分析"
 },ensure_ascii=False,separators=(",",":"))+"\n")
 # model is NOT backtested and therefore has NO high/medium/low confidence classification.
-research={"version":"0.5","updated_at_utc":now,"validation":validation,"analyst_validation":analyst_validation,"predictions":predictions,"odds_comparison":[],"odds_discovery_count":len(odds_discovery),"odds_observation_count":len(odds_observations),"normalized_market_count":len(normalized_markets),"market_snapshot_count":len(market_snapshots),"report_count":len(reports),"sources":[{"name":"ESPN scoreboard / summary","type":"賽事、近期完賽細節","status":"已取得快照","rights":"再發布條款待審核"},{"name":"ESPN injuries","type":"目前傷病資訊","status":"已取得 "+str(len(injury_snapshot["injuries"]))+" 筆" if not injury_snapshot["errors"] else "取得失敗","rights":"再發布條款待審核"},{"name":"ESPN team boxscore four factors","type":"已完賽進攻籃板、失誤、罰球與eFG","status":"已擷取 "+str(len(box_samples))+" 筆隊伍資料","rights":"再發布條款待審核"},{"name":"PBP Stats","type":"2025–26 前季PPP與每次進攻耗時（不是本季現況）","status":"已取得 "+str(season_priors.get("team_count",0))+" 隊" if season_priors.get("team_count",0)>=28 else "前季數據不可用","rights":"再發布條款待審核"},{"name":"固定參數 10 季 Elo","type":"逐場時序檢驗之獨贏基準（讓分／大小仍未驗證）","status":"已計算" if predictions else "無未開賽賽事","rights":"僅研究用途"},{"name":"台灣運彩","type":"台灣盤口","status":"尚無核准資料接口","rights":"未確認"},{"name":"The Odds API","type":"國際盤口","status":"需要 API 金鑰及授權","rights":"依服務條款"}]}
+research={"version":"0.5","updated_at_utc":now,"validation":validation,"analyst_validation":analyst_validation,"predictions":predictions,"odds_comparison":[],"odds_discovery_count":len(odds_discovery),"odds_observation_count":len(odds_observations),"normalized_market_count":len(normalized_markets),"market_snapshot_count":len(market_snapshots),"market_coverage":market_coverage_report,"report_count":len(reports),"sources":[{"name":"ESPN scoreboard / summary","type":"賽事、近期完賽細節","status":"已取得快照","rights":"再發布條款待審核"},{"name":"ESPN injuries","type":"目前傷病資訊","status":"已取得 "+str(len(injury_snapshot["injuries"]))+" 筆" if not injury_snapshot["errors"] else "取得失敗","rights":"再發布條款待審核"},{"name":"ESPN team boxscore four factors","type":"已完賽進攻籃板、失誤、罰球與eFG","status":"已擷取 "+str(len(box_samples))+" 筆隊伍資料","rights":"再發布條款待審核"},{"name":"PBP Stats","type":"2025–26 前季PPP與每次進攻耗時（不是本季現況）","status":"已取得 "+str(season_priors.get("team_count",0))+" 隊" if season_priors.get("team_count",0)>=28 else "前季數據不可用","rights":"再發布條款待審核"},{"name":"固定參數 10 季 Elo","type":"逐場時序檢驗之獨贏基準（讓分／大小仍未驗證）","status":"已計算" if predictions else "無未開賽賽事","rights":"僅研究用途"},{"name":"台灣運彩","type":"台灣盤口","status":"尚無核准資料接口","rights":"未確認"},{"name":"The Odds API","type":"國際盤口","status":"需要 API 金鑰及授權","rights":"依服務條款"}]}
 (ROOT/"research.json").write_text(json.dumps(research,ensure_ascii=False,separators=(",",":"))+"\n")
 print("saved",len(games),"games",len(details),"details",len(predictions),"experimental forecasts; errors",len(errors))
