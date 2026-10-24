@@ -69,13 +69,15 @@
        const elo=num(game.home_win_probability),est=elo===null?null:(home?elo:1-elo);
        const m=market?market.moneyline:null,s=market?market.spread:null;
        if(isTotal){
-         const total=report&&report.markets?report.markets.total:null;
-         const line=total?total.line:(market&&market.total?market.total.line:null);
+         const total=local?market.total:(report&&report.markets?report.markets.total:(market&&market.total));
+         const line=total?total.line:null;
          const result=total?(select.value==="total_over"?total.over_probability_experimental:total.under_probability_experimental):null;
          view.append(gauge(num(result)),elt("p","pl-muted",select.value==="total_over"?"大分機率（試驗估計）："+fmt(num(result)):"小分機率（試驗估計）："+fmt(num(result))));
          view.append(elt("p","pl-muted","觀測總分盤："+safe(line)));
          const quotes=market&&market.observed_prices||{};
-         view.append(elt("p","pl-muted","實際大小分賠率（美式／十進位）· 大 "+
+         if(local){
+            view.append(elt("p","pl-muted","台灣運彩盤實際十進位賠率：大 "+safe(total.over_decimal)+"／小 "+safe(total.under_decimal)));
+         }else view.append(elt("p","pl-muted","國際盤賠率（美式／十進位）· 大 "+
            american(quotes.total_over_american)+"／"+decimalFromAmerican(quotes.total_over_american)+
            "，小 "+american(quotes.total_under_american)+"／"+decimalFromAmerican(quotes.total_under_american)));
          if(total&&typeof total.expected_total==="number")view.append(elt("p","pl-muted","近期攻守得分模型預估總分："+total.expected_total+" 分"));
@@ -89,7 +91,8 @@
          view.append(elt("p","pl-muted","讓分／受讓線："+(line===null||line===undefined?"未確認":(line>0?"+":"")+line)));
          const q=market&&market.observed_prices||{};
          const odd=home?q.spread_home_american:q.spread_away_american;
-         view.append(elt("p","pl-muted","實際讓分賠率（美式／十進位）："+american(odd)+"／"+decimalFromAmerican(odd)));
+         if(local)view.append(elt("p","pl-muted","台灣運彩盤實際十進位賠率："+safe(home?s.home_decimal:s.away_decimal)));
+         else view.append(elt("p","pl-muted","國際盤賠率（美式／十進位）："+american(odd)+"／"+decimalFromAmerican(odd)));
          if(s&&s.details)view.append(elt("p","pl-muted","來源盤口標示："+s.details));
          if(s&&s.whole_point_push_possible)view.append(elt("p","pl-muted","整數盤可能走水：此連續近似模型未估計走水機率。"));
          const sigma=report&&report.analyst&&report.analyst.projection&&report.analyst.projection.margin_sigma;
@@ -99,7 +102,8 @@
          const fair=m?(home?m.home_no_vig_probability:m.away_no_vig_probability):null;
          const odds=m?(home?m.home_american:m.away_american):null;
          view.append(elt("p","pl-muted","市場去水後隱含機率："+fmt(num(fair))));
-         view.append(elt("p","pl-muted","實際獨贏賠率（美式／十進位）："+american(odds)+"／"+decimalFromAmerican(odds)));
+         if(local)view.append(elt("p","pl-muted","台灣運彩盤實際十進位賠率："+safe(home?m.home_decimal:m.away_decimal)));
+         else view.append(elt("p","pl-muted","國際盤賠率（美式／十進位）："+american(odds)+"／"+decimalFromAmerican(odds)));
        }
        view.append(elt("p","pl-muted",market?"觀測："+safe(market.provider)+" · "+time(market.captured_at_utc):"本場沒有對應的盤口觀測"));
        const stale=market&&market.captured_at_utc&&(Date.now()-Date.parse(market.captured_at_utc)>2*3600000);
