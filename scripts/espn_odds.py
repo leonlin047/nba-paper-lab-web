@@ -53,7 +53,8 @@ def compact_market(q,game_id,captured_at,source):
     total=safe_num(q.get("overUnder"),100,350)
     home_line=safe_num(nested(q,"pointSpread","home","close","line"),-70,70)
     away_line=safe_num(nested(q,"pointSpread","away","close","line"),-70,70)
-    if home_line is not None and away_line is not None and abs(home_line+away_line)>.01:
+    invalid_spread_sides=(home_line is not None and away_line is not None and abs(home_line+away_line)>.01)
+    if invalid_spread_sides:
         home_line=None;away_line=None
     if spread is None:spread=home_line
     if total is None:total=safe_num(nested(q,"total","over","close","line").lstrip("oO") if isinstance(nested(q,"total","over","close","line"),str) else nested(q,"total","over","close","line"),100,350)
@@ -90,6 +91,7 @@ def compact_market(q,game_id,captured_at,source):
     return {
         "event_id":str(game_id),"provider":name.strip(),
         "spread":spread,"home_line_observed":home_line,"away_line_observed":away_line,
+        "invalid_spread_sides":invalid_spread_sides,
         "over_under":total,"details":details,
         "home_moneyline":home_ml,"away_moneyline":away_ml,
         "home_spread_american":hs,"away_spread_american":aws,
@@ -107,6 +109,10 @@ def normalize_team(code):
 def validate_quote(quote,home,away):
     """Cross-check bookmakers' named favorite and both directional lines."""
     from market_model import home_spread_from_pickcenter
+    if quote.get("invalid_spread_sides"):
+        quote["invalid_reason"]="opposite_spread_lines_do_not_balance"
+        quote["home_spread_verified"]=None
+        return quote
     details=quote.get("details")
     home_line=quote.get("home_line_observed")
     raw=quote.get("spread")
