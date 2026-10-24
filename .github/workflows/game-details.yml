@@ -43,16 +43,42 @@ jobs:
           node --check localization.js
           node --check localization-extra.js
           node --check news.js
-      - name: Commit verified snapshots
+      - name: Commit verified snapshots without stale rebase conflicts
         run: |
+          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/games.json data/research.json data/playsport_status.json data/injuries.json data/reports.json data/news.json data/box_factors.json data/analyst_validation.json
-          if ! git diff --cached --quiet; then
-            git commit -m "data: refresh NBA game details and experimental forecasts"
-            git pull --rebase
-            git push
-          fi
+          snapshots=(games.json research.json playsport_status.json injuries.json reports.json news.json box_factors.json analyst_validation.json)
+          tmpdir="$(mktemp -d)"
+          for file in "${snapshots[@]}"; do
+            cp "data/$file" "$tmpdir/$file"
+          done
+          for attempt in 1 2 3; do
+            git fetch origin main
+            # Do not publish an older model's results after its source changes.
+            changed="$(git diff --name-only HEAD origin/main -- scripts/ tests/ research-dashboard.js game-details.js injuries.js news.js localization.js index.html .github/workflows/game-details.yml)"
+            if [ -n "$changed" ]; then
+              echo "Source changed while analyzing; skip stale publish (newer run will regenerate)."
+              exit 0
+            fi
+            git reset --hard origin/main
+            for file in "${snapshots[@]}"; do
+              cp "$tmpdir/$file" "data/$file"
+            done
+            git add data/games.json data/research.json data/playsport_status.json data/injuries.json data/reports.json data/news.json data/box_factors.json data/analyst_validation.json
+            if git diff --cached --quiet; then
+              echo "No snapshot changes."
+              exit 0
+            fi
+            git commit -m "data: refresh source-backed NBA analysis snapshots"
+            if git push; then
+              echo "Snapshot publish succeeded."
+              exit 0
+            fi
+            sleep "$attempt"
+          done
+          echo "Unable to publish after three conflict-safe attempts." >&2
+          exit 1
       - name: Request Pages deployment after data refresh
         if: success()
         env:
