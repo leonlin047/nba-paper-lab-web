@@ -63,9 +63,10 @@ def sample_model(g,team_games,league_games,elo_prob=None):
         "elo_margin_component":round(elo_margin,2) if elo_margin is not None else None,
         "form_margin_component":round(form_margin,2),
         "league_home_margin":round(avg_home_margin,2),
+        "league_avg_total":round(base*2,2),
         "league_games_n":len(league),
         "home_form_n":len(hs),"away_form_n":len(a_s),
-        "method":"55% Elo margin + 45% shrunk points for/against; total from shrunk scoring; no injury effect fitted",
+        "method":"Elo + shrunk team scoring blended using earlier-season training; no injury effect fitted",
         "source":"ESPN historical NBA final scores, strictly pre-tipoff"}
 
 def eligible_league(league_games,tip):
@@ -91,6 +92,9 @@ def evaluate_and_project(historical,current,predictions):
     prev_season=None
     train_margin_errors=[]
     train_total_errors=[]
+    train_margin_components=[]
+    holdout_margin_components=[]
+    holdout_naive_totals=[]
     holdout_margin=[]
     holdout_total=[]
     holdout_winner_probs=[]
@@ -111,12 +115,16 @@ def evaluate_and_project(historical,current,predictions):
         if projection:
             err_margin=projection["expected_margin"]-margin
             err_total=projection["expected_total"]-total
+            components=(projection.get("elo_margin_component"),projection.get("form_margin_component"),margin)
             if 2023<=year<=TRAIN_SEASON_END:
                 train_margin_errors.append(err_margin)
                 train_total_errors.append(err_total)
+                if components[0] is not None:train_margin_components.append(components)
             elif year==HOLDOUT_SEASON_END:
                 holdout_margin.append(err_margin)
                 holdout_total.append(err_total)
+                holdout_naive_totals.append(projection["league_avg_total"]-total)
+                if components[0] is not None:holdout_margin_components.append(components)
         # Full-season Elo win baseline evaluated separately in elo_history.py
         if year==HOLDOUT_SEASON_END:
             holdout_winner_probs.append(p)
@@ -127,10 +135,25 @@ def evaluate_and_project(historical,current,predictions):
         by_team[h].append(g)
         by_team[a].append(g)
         league.append(g)
+    # Freeze weight chosen ONLY on pre-holdout training.
+    weight_grid=[0.0,.25,.5,.75,1.0]
+    if len(train_margin_components)>=150:
+        def err_for(w,records):
+            return [w*e+(1-w)*f-y for e,f,y in records]
+        weight=min(weight_grid,key=lambda w:mean(abs(v) for v in err_for(w,train_margin_components)))
+        train_margin_errors=err_for(weight,train_margin_components)
+        holdout_margin=err_for(weight,holdout_margin_components)
+    else:
+        weight=BLEND_ELO
     margin_sd=max(8.0,min(28.0,pstdev(train_margin_errors))) if len(train_margin_errors)>150 else None
     total_sd=max(12.0,min(40.0,pstdev(train_total_errors))) if len(train_total_errors)>150 else None
     metrics={
-        "method":"chronological rolling score projection with fixed coefficients",
+        "method":"chronological rolling score projection; margin blend selected on earlier training seasons",
+        "selected_elo_margin_weight_from_training":weight,
+        "candidate_elo_margin_weights":weight_grid,
+        "ablation_holdout_elo_only_mae":round(mean(abs(e-y) for e,f,y in holdout_margin_components),3) if holdout_margin_components else None,
+        "ablation_holdout_form_only_mae":round(mean(abs(f-y) for e,f,y in holdout_margin_components),3) if holdout_margin_components else None,
+        "ablation_holdout_total_naive_league_mae":round(mean(abs(v) for v in holdout_naive_totals),3) if holdout_naive_totals else None,
         "train_window":"2022-23 to 2024-25",
         "holdout_season":"2025-26",
         "train_margin_n":len(train_margin_errors),"train_total_n":len(train_total_errors),
@@ -158,6 +181,9 @@ def evaluate_and_project(historical,current,predictions):
         forecasts[str(g["id"])]=sample_model(g,by_team,league,pregame_by_id[str(g["id"])].get("home_win_probability"))
         v=forecasts[str(g["id"])]
         if v:
+            if v.get("elo_margin_component") is not None:
+                v["expected_margin"]=round(weight*v["elo_margin_component"]+(1-weight)*v["form_margin_component"],2)
+                v["margin_blend_weight_elo_selected_on_training"]=weight
             v["margin_sigma"]=round(margin_sd,3) if margin_sd else None
             v["total_sigma"]=round(total_sd,3) if total_sd else None
             v["trained_before"]="2025-26 historical holdout"
