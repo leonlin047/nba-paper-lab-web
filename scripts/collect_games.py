@@ -193,9 +193,12 @@ try:
             if isinstance(st,dict):st=st.get("name") or st.get("displayName")
             name=athlete.get("displayName") or athlete.get("fullName")
             if not name:continue
+            athlete_team=athlete.get("team") or {}
+            team_code=(athlete_team.get("abbreviation") if isinstance(athlete_team,dict) else None)
+            if not team_code and isinstance(team,dict):team_code=team.get("abbreviation")
             injury_snapshot["injuries"].append({
-                "team":team.get("abbreviation") if isinstance(team,dict) else None,
-                "team_name":team.get("displayName") if isinstance(team,dict) else None,
+                "team":team_code,
+                "team_name":(athlete_team.get("displayName") if isinstance(athlete_team,dict) else None) or group.get("displayName"),
                 "player":name,"status":st or "未公布",
                 "type":details.get("type"),"detail":details.get("detail"),
                 "date":rec.get("date"),"return_date":details.get("returnDate")})
