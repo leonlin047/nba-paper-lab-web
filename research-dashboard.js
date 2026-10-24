@@ -87,6 +87,47 @@
      const observation=elt("p","pl-muted",report&&report.report_zh?report.report_zh:"報告尚未生成，請確認資料更新工作流程。");
      observation.style.cssText="font-size:14px;line-height:1.8;white-space:normal";
      reportBlock.append(observation);
+     const evidence=report&&report.analyst;
+     if(evidence){
+       const facts=elt("details");facts.style.cssText="padding:10px 0;border-top:1px solid #344a6c";
+       facts.append(elt("summary","","分析師數據證據與限制（依賽前時間回溯）"));
+       const section=(name,value)=>facts.append(elt("p","pl-muted",name+"："+value));
+       const f=evidence.form||{},h=f.home||{},a=f.away||{};
+       const label=code=>window.NbaZh?window.NbaZh.teamShort(code):code;
+       const fmtCount=x=>typeof x==="number"?x.toFixed(1):"—";
+       const noteForm=(name,x)=>x.n?name+" 近"+x.n+"場 "+x.wins+"勝，場均得"+fmtCount(x.avg_scored)+"／失"+fmtCount(x.avg_allowed)+"，淨勝"+fmtCount(x.avg_margin)+"，休息"+fmtCount(x.rest_days)+"天"+(x.back_to_back_proxy?"（背靠背間隔）":""):"無有效最近場次";
+       section("近期主隊",noteForm(label(game.home),h));
+       section("近期客隊",noteForm(label(game.away),a));
+       if(h.home&&h.home.n)section("主隊主場",h.home.n+"場淨勝"+fmtCount(h.home.avg_margin)+"分");
+       if(a.away&&a.away.n)section("客隊客場",a.away.n+"場淨勝"+fmtCount(a.away.avg_margin)+"分");
+       if(f.h2h&&f.h2h.n)section("過去兩年交手",f.h2h.n+"場，當前主隊平均淨勝"+fmtCount(f.h2h.avg_home_team_margin)+"分；跨季樣本不等於今季實力");
+       const box=evidence.box_four_factors||{},bh=box.home||{},ba=box.away||{};
+       if(bh.n>=3&&ba.n>=3){
+          section("投籃與控球（實際賽後統計）","主／客eFG% "+fmtCount(bh.eFG_pct)+"／"+fmtCount(ba.eFG_pct)+"；三分出手率 "+fmtCount(bh.three_point_attempt_rate)+"／"+fmtCount(ba.three_point_attempt_rate));
+          section("估算回合數與失誤率","主／客估算回合 "+fmtCount(bh.estimated_possessions)+"／"+fmtCount(ba.estimated_possessions)+"；TO% "+fmtCount(bh.turnover_per_est_poss_pct)+"／"+fmtCount(ba.turnover_per_est_poss_pct)+"（非官方Pace）");
+       }else section("節奏／四要素","目前每隊有效團隊boxscore不足3場；不拿場均得分冒充Pace或攻防效率");
+       const p=evidence.projection||{};
+       if(typeof p.expected_margin==="number")section("賽前分差／總分模型","預估主隊淨勝"+fmtCount(p.expected_margin)+"分、總分"+fmtCount(p.expected_total)+"分，歷史殘差σ約"+fmtCount(p.margin_sigma)+"/"+fmtCount(p.total_sigma)+"分");
+       else section("賽前分差／總分模型","有效球隊歷史樣本不足，暫無可驗證的模型估算");
+       const injury=evidence.injuries||{};
+       if(injury.available&&injury.fresh){
+         const rows=injury.rows||[];
+         section("傷病清單",rows.length+"筆（ESPN；非聯盟針對本場的正式出賽公告）");
+         for(const x of rows.slice(0,8))section(label(x.team)+"傷病",((window.NbaZh&&window.NbaZh.player(x.player))||x.player||"未知球員")+" · "+(x.status||"未公布")+(x.type?" · "+x.type:""));
+       }else section("傷病證據",injury.note||"無賽前有效時間戳或狀態，禁止推定已健康");
+       if(market&&market.provider_open_last){
+         const mv=market.provider_open_last,sp=mv.pointSpread||{},ttl=mv.total||{},ml=mv.moneyline||{};
+         const price=z=>z&&z.odds!=null?String(z.odds):"—";
+         const line=z=>z&&z.line!=null?String(z.line):"—";
+         if(sp.home)section("提供商讓分標記","主隊開盤 "+line(sp.home.open)+"（"+price(sp.home.open)+"）→ 目前 "+line(sp.home.close)+"（"+price(sp.home.close)+"）");
+         if(ttl.over)section("提供商大小標記","大分開盤 "+line(ttl.over.open)+" → 目前 "+line(ttl.over.close));
+         if(ml.home)section("提供商獨贏標記","主隊開盤 "+price(ml.home.open)+" → 目前 "+price(ml.home.close));
+         section("盤口時序限制","開盤／目前為業者欄位，未取得每次變動的精確時間；不可據此證明資金流向或過去資訊已知。");
+       }
+       section("來源與缺值","ESPN完成比賽比分、近期團隊boxscore、當前傷病快照、莊家盤口觀測；各證據採賽前時間過濾。"+
+         "目前未以X貼文推定先發或球員上場時間，新聞標題僅供查核。");
+       reportBlock.append(facts);
+     }
      if(report&&Array.isArray(report.related_reporting)&&report.related_reporting.length){
        reportBlock.append(elt("p","pl-muted","關聯球隊近期新聞（非 X 即時貼文；不能據此認定先發）："));
        for(const story of report.related_reporting){
@@ -135,6 +176,12 @@
      if($("model-sample"))$("model-sample").textContent=safe(d.validation&&d.validation.sample_size);
      if($("model-brier"))$("model-brier").textContent=num(d.validation&&d.validation.brier)!==null?d.validation.brier.toFixed(4):"—";
      if($("model-logloss"))$("model-logloss").textContent=num(d.validation&&d.validation.log_loss)!==null?d.validation.log_loss.toFixed(4):"—";
+     if($("model-score-mae")){
+        const stats=d.analyst_validation||{};
+        const m=typeof stats.margin_mae==="number"?stats.margin_mae.toFixed(2):"—";
+        const t=typeof stats.total_mae==="number"?stats.total_mae.toFixed(2):"—";
+        $("model-score-mae").textContent="2025–26比分預測測試：分差MAE "+m+"分（"+(stats.holdout_margin_n||0)+"場），總分MAE "+t+"分（"+(stats.holdout_total_n||0)+"場）。歷史盤口不完整，無法驗證ATS或大／小分命中率。";
+     }
      marketOverview(g.market_snapshots,g.odds_discovery);
      sources(d,p);
      $("pl-update").textContent="資料版本："+safe(d.version)+" · 更新："+time(d.updated_at_utc);
