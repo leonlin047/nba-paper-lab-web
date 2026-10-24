@@ -113,15 +113,23 @@
      select.addEventListener("change",repaint);card.append(select,view);repaint();
      const overview=elt("p","pl-muted");
      const homeProb=game.home_win_probability;
-     const quotes=market&&market.observed_prices||{};
-     const observed=market&&market.provider?
-        "國際盤："+market.provider+" · 獨贏主／客 "+american(market.moneyline&&market.moneyline.home_american)+" / "+american(market.moneyline&&market.moneyline.away_american)+
-        " · 讓分主 "+safe(market.spread&&market.spread.home_line)+"（"+american(quotes.spread_home_american)+"）"+
-        " · 大小 "+safe(market.total&&market.total.line)+"（大"+american(quotes.total_over_american)+"／小"+american(quotes.total_under_american)+"）":
-        "本場未取得真實盤口；模型機率不是莊家報價。";
-     card.append(elt("p","pl-muted",observed));
+     const quotes=international&&international.observed_prices||{};
+     const domesticNote=local?
+       "台灣運彩盤（玩運彩公開整理）：獨贏 主／客 "+safe(local.moneyline.home_decimal)+"/"+safe(local.moneyline.away_decimal)+
+       " · 讓分主 "+safe(local.spread.home_line)+"（"+safe(local.spread.home_decimal)+"）"+
+       " · 大小 "+safe(local.total.line)+"（大"+safe(local.total.over_decimal)+"／小"+safe(local.total.under_decimal)+"）":
+       "台灣運彩盤：這場尚無可驗證的賽前報價。";
+     const foreignNote=international&&international.provider?
+       "國際盤："+international.provider+" · 獨贏主／客 "+american(international.moneyline&&international.moneyline.home_american)+" / "+american(international.moneyline&&international.moneyline.away_american)+
+       " · 讓分主 "+safe(international.spread&&international.spread.home_line)+"（"+american(quotes.spread_home_american)+"）"+
+       " · 大小 "+safe(international.total&&international.total.line)+"（大"+american(quotes.total_over_american)+"／小"+american(quotes.total_under_american)+"）":
+       "國際盤：這場尚無可驗證的盤口。";
+     const observed=domesticNote+"\\n"+foreignNote;
+     const observedElement=elt("p","pl-muted",observed);
+     observedElement.style.whiteSpace="pre-line";
+     card.append(observedElement);
      const cover=market&&market.spread?market.spread.home_cover_probability_experimental:null;
-     const total=report&&report.markets?report.markets.total:null;
+     const total=local?local.total:(report&&report.markets?report.markets.total:null);
      overview.textContent="三市場總覽 · 主隊獨贏 "+fmt(num(homeProb))+"｜主隊過盤 "+fmt(num(cover))+"｜大分 "+fmt(num(total&&total.over_probability_experimental));
      card.append(overview);
      const reportBlock=elt("details");
@@ -130,6 +138,7 @@
      const observation=elt("p","pl-muted",report&&report.report_zh?report.report_zh:"報告尚未生成，請確認資料更新工作流程。");
      observation.style.cssText="font-size:14px;line-height:1.8;white-space:normal";
      reportBlock.append(observation);
+     if(local)reportBlock.append(elt("p","pl-muted","注意：上述原100–200字報告以國際盤為基準；台灣讓分及大小分的實際門檻與模型試算，請以上方選單及台灣盤為準。"));
      const evidence=report&&report.analyst;
      if(evidence){
        const facts=elt("details");facts.style.cssText="padding:10px 0;border-top:1px solid #344a6c";
