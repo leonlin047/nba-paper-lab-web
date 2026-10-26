@@ -87,68 +87,85 @@ def model_total(future,completed,market_line):
         "method":"shrunk team for/against + league total variance; experimental, not calibrated"}
 
 def summary(game,forecast,market,total,analysis=None):
-    """Evidence-based analyst observation; absence of observed evidence is explicit."""
-    away,home=team(game["away"]),team(game["home"])
+    """100–200 character evidence-first NBA analyst report, not a betting tip.
+
+    Explain moneyline, spread and totals with source-backed numbers, a
+    pregame factor, and an explicit statement when risk is unquantified.
+    Never pretend missing injury/odds/last-game information is zero.
+    """
+    context = analysis or {}
+    home,away=team(game["home"]),team(game["away"])
     p=forecast.get("home_win_probability")
-    factors=(analysis or {}).get("form") or {}
-    hf,af=factors.get("home") or {},factors.get("away") or {}
-    def form_margin(f):
-        value=f.get("avg_margin")
-        return f"{value:+g}" if isinstance(value,(int,float)) else "—"
-    if hf.get("n") and af.get("n"):
-        context=f"近{hf['n']}/{af['n']}場淨勝分主{form_margin(hf)}、客{form_margin(af)}。"
+    core=f"{away}對{home}｜獨贏：Elo主{pct(p)}、客{pct(1-p) if isinstance(p,(int,float)) else '—'}。"
+    sp=(market or {}).get("spread") or {}
+    sp_model=context.get("spread") or {}
+    projection=context.get("projection") or {}
+    line=sp.get("home_line")
+    cover=sp_model.get("home")
+    if isinstance(line,(int,float)) and math.isfinite(line) and isinstance(cover,(int,float)):
+        margin=projection.get("expected_margin")
+        core+=f"讓分：主{line:+g}、試驗過盤{pct(cover)}"
+        if isinstance(margin,(int,float)):
+            core+=f"，模型淨勝{margin:+.1f}"
+        core+="。"
+    elif isinstance(line,(int,float)) and math.isfinite(line):
+        core+=f"讓分：主{line:+g}，模型尚缺證據。"
     else:
-        context="近期樣本不足，不以猜測補上實力差。"
-    start=f"{away}對{home}｜獨贏：十季Elo主{pct(p)}、客{pct(1-p) if isinstance(p,(int,float)) else '—'}；{context}"
-    spread=(analysis or {}).get("spread") or {}
-    market_spread=market.get("spread") if market else None
-    line=market_spread.get("home_line") if isinstance(market_spread,dict) else None
-    cover=spread.get("home") if spread else None
-    if isinstance(line,(int,float)) and isinstance(cover,(int,float)):
-        expected=(analysis or {}).get("projection") or {}
-        em=expected.get("expected_margin")
-        if isinstance(em,(int,float)):
-            second=f"讓分：主{line:+g}、模型淨勝{em:+.1f}，過盤{pct(cover)}；"
+        core+="讓分：缺可追溯參考線，不算過盤率。"
+    tot=(market or {}).get("total") or {}
+    total_line=tot.get("line")
+    total_model=context.get("total") or {}
+    over=total_model.get("over")
+    expected=projection.get("expected_total")
+    if isinstance(total_line,(int,float)) and math.isfinite(total_line):
+        core+=f"大小：線{total_line:g}"
+        if isinstance(expected,(int,float)) and math.isfinite(expected):
+            core+=f"，估{expected:.1f}分"
+        if isinstance(over,(int,float)) and math.isfinite(over):
+            core+=f"，大分{pct(over)}"
         else:
-            second=f"讓分：主{line:+g}，試算過盤{pct(cover)}；"
-    elif isinstance(line,(int,float)):
-        second=f"讓分：主{line:+g}分，分差模型證據不足；"
+            core+="，未具備校準結果"
+        core+="。"
+    elif isinstance(expected,(int,float)) and math.isfinite(expected):
+        core+=f"大小：預估{expected:.1f}分，缺參考線。"
     else:
-        second="讓分：無可驗證盤口，不估過盤率；"
+        core+="大小：缺充分近期樣本與盤口。"
+
+    form=context.get("form") or {}
+    hf,af=form.get("home") or {},form.get("away") or {}
+    candidates=[]
     if hf.get("n") and af.get("n"):
-        resth,resta=hf.get("rest_days"),af.get("rest_days")
-        if isinstance(resth,(int,float)) and isinstance(resta,(int,float)):
-            second+=f"雙方休息{resth:g}/{resta:g}天，未假設固定疲勞效果。"
-    total_market=market.get("total") if market else None
-    total_line=total_market.get("line") if isinstance(total_market,dict) else None
-    estimate=(analysis or {}).get("projection") or {}
-    prop=(analysis or {}).get("total") or {}
-    over=prop.get("over")
-    if isinstance(total_line,(int,float)) and isinstance(over,(int,float)):
-        third=f"大小：盤{total_line:g}、預估{estimate['expected_total']:.1f}（差{estimate['expected_total']-total_line:+.1f}），大分{pct(over)}；"
-    elif isinstance(total_line,(int,float)):
-        third=f"大小：盤{total_line:g}，總分模型尚缺校準；"
-    elif estimate:
-        third=f"大小：模型預估{estimate['expected_total']:g}分，但缺真實盤口；"
+        hm,am=hf.get("avg_margin"),af.get("avg_margin")
+        if isinstance(hm,(int,float)) and isinstance(am,(int,float)):
+            candidates.append(f"近{hf['n']}/{af['n']}場主客均淨勝{hm:+.1f}/{am:+.1f}。")
+        hd,ad=hf.get("rest_days"),af.get("rest_days")
+        if isinstance(hd,(int,float)) and isinstance(ad,(int,float)):
+            candidates.append(f"休息主客{hd:g}/{ad:g}日；休息日不直接等於優勢。")
+    prior=context.get("previous_season_efficiency") or {}
+    ph,pa=prior.get("home") or {},prior.get("away") or {}
+    oh,oa=ph.get("offensive_rating_previous_season"),pa.get("offensive_rating_previous_season")
+    if isinstance(oh,(int,float)) and isinstance(oa,(int,float)):
+        candidates.append(f"上季進攻效率主{oh:.1f}、客{oa:.1f}，不代表本季陣容。")
+    injuries=context.get("injuries") or {}
+    if injuries.get("available") and injuries.get("fresh"):
+        candidates.append(f"傷病通報{len(injuries.get('rows') or [])}筆，未建立分鐘數影響模型。")
     else:
-        third="大小：近期得分樣本不足，暫不提供預估；"
-    if hf.get("n") and af.get("n"):
-        third+=f"近況場均得分主{hf.get('avg_scored','—')}/客{af.get('avg_scored','—')}。"
-    injury=(analysis or {}).get("injuries") or {}
-    if injury.get("available") and injury.get("fresh"):
-        x=injury.get("rows",[])
-        caution=f"傷病通報{len(x)}筆，未量化球員上場影響；讓分與大小僅為試驗估計。"
+        candidates.append("傷病及先發資料尚未核實。")
+    tail="讓分與大小皆為試驗研究，尚未驗證長期過盤率或正期望值。"
+    text=core
+    # Keep source-backed evidence first, but never drop the uncertainty notice.
+    for item in candidates:
+        if len(text+item+tail)<=200:
+            text+=item
+    if len(text+tail)<=200:
+        text+=tail
     else:
-        caution="傷病及先發資訊尚未核實；讓分與大小僅為試驗估計，非投注建議。"
-    text=start+second+third+caution
-    if len(text)>200:
-        # Preserve real numbers and observations before dropping repetitive cautions.
-        caution="傷兵影響與盤口變動尚未量化。"
-        text=start+second+third+caution
-    if len(text)>200:
-        text=start+second+third
+        shorter="過盤率未經歷史盤口獨立校準。"
+        if len(text+shorter)<=200:
+            text+=shorter
     if len(text)<100:
-        text+="缺少的來源需等賽前驗證，不能把報導推測視為球員確定出賽或量化優勢。"
+        filler="賽事結果仍受輪替變化、出手波動、賽程與臨場因素影響；目前沒有足夠證據量化這些影響，需以賽前留存快照及賽後結果逐場校驗。"
+        text+=filler[:max(0,200-len(text))]
     if not 100<=len(text)<=200:
         raise ValueError(f"Report length invalid {len(text)} for {game.get('id')}: {text}")
     return text

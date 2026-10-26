@@ -1,0 +1,32 @@
+name: Validate interactive mobile analytics PR
+on:
+  pull_request:
+    paths:
+      - "index.html"
+      - "*.js"
+      - "data/pregame-audit.json"
+      - "scripts/*.py"
+      - "tests/*.py"
+      - ".github/workflows/web-pr-checks.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  syntax-and-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install offline-test HTML parser
+        run: python3 -m pip install --disable-pip-version-check 'beautifulsoup4>=4.12,<5'
+      - name: Check JavaScript syntax
+        run: |
+          node --check team-analytics.js
+          node --check audit-dashboard.js
+          node --check research-dashboard.js
+          node --check game-details.js
+          node --check injuries.js
+      - name: Run all offline Python tests
+        run: python3 -m unittest discover -s tests -v
