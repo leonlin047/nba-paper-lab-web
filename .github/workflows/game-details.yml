@@ -14,6 +14,9 @@ on:
       - 'localization.js'
       - 'localization-extra.js'
       - 'index.html'
+      - 'team-analytics.js'
+      - 'audit-dashboard.js'
+      - 'data/pregame-audit.json'
       - '.github/workflows/game-details.yml'
   schedule:
     - cron: '27 * * * *'
@@ -47,6 +50,8 @@ jobs:
           node --check localization.js
           node --check localization-extra.js
           node --check news.js
+          node --check team-analytics.js
+          node --check audit-dashboard.js
       - name: Commit verified snapshots without stale rebase conflicts
         run: |
           set -euo pipefail
@@ -60,7 +65,7 @@ jobs:
           for attempt in 1 2 3; do
             git fetch origin main
             # Do not publish an older model's results after its source changes.
-            changed="$(git diff --name-only HEAD origin/main -- scripts/ tests/ research-dashboard.js game-details.js injuries.js news.js localization.js index.html .github/workflows/game-details.yml)"
+            changed="$(git diff --name-only HEAD origin/main -- scripts/ tests/ research-dashboard.js game-details.js injuries.js news.js localization.js index.html team-analytics.js audit-dashboard.js data/pregame-audit.json .github/workflows/game-details.yml)"
             if [ -n "$changed" ]; then
               echo "Source changed while analyzing; skip stale publish (newer run will regenerate)."
               exit 0
