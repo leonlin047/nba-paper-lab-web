@@ -16,7 +16,7 @@
    for(const injury of d.injuries){const name=injury.team||injury.team_name||"未知球隊";if(!groups.has(name))groups.set(name,[]);groups.get(name).push(injury)}
    for(const [team,items] of [...groups].sort((a,b)=>a[0].localeCompare(b[0]))){
     const section=elem("details"),sum=elem("summary",zh.teamShort(team)+" · "+items.length+" 筆");sum.style.cssText="font-weight:700;padding:12px 0";section.append(sum);
-    for(const x of items){const p=elem("p",zh.player(x.player||"未知球員")+" · "+(x.status||"未公布")+(x.type?" · "+x.type:""));p.style.cssText="font-size:13px;border-bottom:1px solid #304362;padding:8px 0";section.append(p)}
+    for(const x of items){const p=elem("p",zh.player(x.player||"未知球員")+" · "+(x.status||"未公布")+(x.type?" · "+x.type:""));p.style.cssText="font-size:13px;border-bottom:1px solid #E3E7F0;padding:8px 0";section.append(p)}
     target.append(section);
    }
   }catch(e){target.textContent="傷病快照尚未就緒："+e.message+"；無法據此判定出賽狀況。"}
