@@ -24,6 +24,7 @@
   const pct=value=>typeof value==="number"&&Number.isFinite(value)&&(value>=0&&value<=1)?(100*value).toFixed(1)+"%":"未驗證";
   const fmt=value=>typeof value==="number"&&Number.isFinite(value)?value.toFixed(1):"—";
   let data=null;
+  let replay=null;
   function overview(){
     host.replaceChildren();
     const dt=data?.as_of_utc?Date.parse(data.as_of_utc):NaN;
@@ -50,6 +51,7 @@
     const choices=element("div",undefined,"apex-switch");
     const views=[
       ["metrics","Elo vs Apex"],
+      ["replay","七日模擬回測"],
       ["score","分差／總分"],
       ["sources","資料與驗證"]
     ];
@@ -58,7 +60,46 @@
     function show(mode){
       body.replaceChildren();
       for(const b of buttons)b.setAttribute("aria-pressed",String(b.dataset.mode===mode));
-      if(mode==="metrics"){
+      if(mode==="replay"){
+        body.append(element("h3","APEX v2.1 七日歷史模擬（10/20–10/26）"));
+        const warning=element("p","這不是當時真正提前封存的 APEX 預測。歷史賽果在事後才下載，模型假設每場完賽六小時後可取得資料，並隔離同一天的其他比賽。請勿與賽前平行稽核混淆。","lab-note");
+        body.append(warning);
+        if(!replay || replay.schema_version!==1 || replay.kind!=="retrospective_simulated_asof_replay"){
+          body.append(element("p","七日模擬結果尚未載入或不符合資料格式；不顯示任何命中率。","muted"));
+        } else {
+          const grid=element("div",undefined,"grid");
+          for(const [label,value,note] of [
+            ["APEX 獨贏方向",replay.apex.accuracy_pct.toFixed(2)+"%",replay.apex.correct+"中／"+replay.apex.n+" 場"],
+            ["Elo 獨贏方向",replay.elo.accuracy_pct.toFixed(2)+"%",replay.elo.correct+"中／"+replay.elo.n+" 場"],
+            ["APEX 分差 MAE",replay.apex.margin_mae.toFixed(3)+" 分","研究性預估分差誤差"],
+            ["APEX 總分 MAE",replay.apex.total_mae.toFixed(3)+" 分","研究性預估總分誤差"]
+          ]){
+            const card=boxed(grid,label,note);
+            card.insertBefore(element("div",value,"metric"),card.querySelector("p"));
+          }
+          body.append(grid);
+          const comparisons=boxed(body,"機率品質：不能只看命中率",
+            "APEX 雖多判對兩場，但 Brier 與 Log Loss 都略高於 Elo，這次不構成模型升級證據。");
+          for(const [key,value] of [
+            ["APEX Brier",replay.apex.brier.toFixed(5)],
+            ["Elo Brier",replay.elo.brier.toFixed(5)],
+            ["APEX Log Loss",replay.apex.log_loss.toFixed(5)],
+            ["Elo Log Loss",replay.elo.log_loss.toFixed(5)],
+            ["讓分／受讓過盤","沒有可驗證的賽前參考線，未計算"],
+            ["大小分過盤","沒有可驗證的賽前參考線，未計算"]
+          ])row(comparisons,key,value);
+          const list=boxed(body,"逐日回放｜台灣日期","以下為模擬比賽日的比分方向命中；樣本很少，僅供統計觀察。");
+          for(const day of replay.by_day){
+            row(list,day.date+" · "+day.games+" 場",
+                day.games ? "APEX "+day.apex_hits+"/"+day.games+"；Elo "+day.elo_hits+"/"+day.games : "當日無比賽");
+          }
+          const more=element("a","開啟43場完整稽核結果（私人 GitHub 登入後下載）");
+          more.href=replay.private_full_artifact;
+          more.rel="noopener noreferrer";more.target="_blank";
+          body.append(more);
+          body.append(element("p","Apex 正式賽前封存：仍是 "+replay.real_frozen_apex_predictions_for_window+" 場。此頁僅保存 2026/10/26 的一次性回放快照，不會每天自動滾動七日。","muted"));
+        }
+      }else if(mode==="metrics"){
         body.append(element("h3","同場賽前 Elo 對照 APEX v2.1"));
         const t=element("div",undefined,"apex-grid");
         for(const [name,metric] of [["模型","Elo／APEX v2.1"],["配對樣本",data.eligible_paired_games+" 場"],["APEX Brier","尚無符合門檻的結果"],["Elo 同場 Brier","尚無符合門檻的結果"],["是否優於 Elo","尚無證據"]])row(t,name,metric);
@@ -94,10 +135,17 @@
     }
     host.append(choices,body);show("metrics");
   }
-  fetch("./data/apex-v21-status.json",{cache:"no-store"}).then(r=>{
-    if(!r.ok)throw Error("HTTP "+r.status);
-    return r.json();
-  }).then(value=>{
+  Promise.all([
+    fetch("./data/apex-v21-status.json",{cache:"no-store"}).then(r=>{
+      if(!r.ok)throw Error("HTTP "+r.status);
+      return r.json();
+    }),
+    fetch("./data/apex-seven-day-replay.json",{cache:"no-store"})
+      .then(r=>r.ok?r.json():null).catch(()=>null)
+  ]).then(([value, replayReport])=>{
+    replay=replayReport;
+
+
     if(value?.schema_version!==1||value?.model_id!=="apex_v21_genuinely_frozen_shadow"||
       value?.release_status!=="merged_private_main"||typeof value?.eligible_paired_games!=="number"||
       typeof value?.minimum_evaluated_games!=="number"||value?.research_only!==true)throw Error("APEX 研究資料格式不符合");
