@@ -5,6 +5,7 @@ on:
       - "index.html"
       - "*.js"
       - "data/pregame-audit.json"
+      - "data/apex-v21-status.json"
       - "scripts/*.py"
       - "tests/*.py"
       - ".github/workflows/web-pr-checks.yml"
@@ -25,6 +26,7 @@ jobs:
         run: |
           node --check team-analytics.js
           node --check audit-dashboard.js
+          node --check apex-dashboard.js
           node --check research-dashboard.js
           node --check game-details.js
           node --check injuries.js
