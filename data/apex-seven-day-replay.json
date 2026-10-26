@@ -1,0 +1,106 @@
+{
+  "schema_version": 1,
+  "model": "apex_v21_joint_score_challenger",
+  "kind": "retrospective_simulated_asof_replay",
+  "research_only": true,
+  "real_frozen_apex_predictions_for_window": 0,
+  "public_archive_commit": "a217218f770e7b83ddc121d4e9a27bbd06b09b9f",
+  "private_replay_run": "https://github.com/leonlin047/nba-paper-lab/actions/runs/40372807014",
+  "private_full_artifact": "https://github.com/leonlin047/nba-paper-lab/actions/runs/40372807014/artifacts/12673132327",
+  "source_archive_captured_at": "2026-10-26T10:30:00.783618+00:00",
+  "current_results_captured_at": "2026-10-26T17:33:19.805281+00:00",
+  "date_range_taiwan": [
+    "2026-10-20",
+    "2026-10-26"
+  ],
+  "completed_games": 43,
+  "simulation_assumption": "Reconstructed old NBA results as available six hours after tipoff. All target-day games withheld together. The source files were downloaded after games and no APEX forecasts were genuinely archived those days.",
+  "interpretation": "APEX had two more correct win directions but slightly worse Brier and Log Loss than Elo. 43 games cannot establish superiority.",
+  "apex": {
+    "n": 43,
+    "correct": 27,
+    "accuracy_pct": 62.79,
+    "brier": 0.22514,
+    "log_loss": 0.6418,
+    "margin_mae": 12.216,
+    "total_mae": 14.162
+  },
+  "elo": {
+    "n": 43,
+    "correct": 25,
+    "accuracy_pct": 58.14,
+    "brier": 0.2247,
+    "log_loss": 0.6385
+  },
+  "by_day": [
+    {
+      "date": "2026-10-20",
+      "games": 0,
+      "apex_hits": 0,
+      "elo_hits": 0,
+      "apex_accuracy_pct": null,
+      "margin_mae": null,
+      "total_mae": null
+    },
+    {
+      "date": "2026-10-21",
+      "games": 3,
+      "apex_hits": 1,
+      "elo_hits": 1,
+      "apex_accuracy_pct": 33.33,
+      "margin_mae": 11.845,
+      "total_mae": 13.133
+    },
+    {
+      "date": "2026-10-22",
+      "games": 11,
+      "apex_hits": 7,
+      "elo_hits": 7,
+      "apex_accuracy_pct": 63.64,
+      "margin_mae": 17.522,
+      "total_mae": 10.969
+    },
+    {
+      "date": "2026-10-23",
+      "games": 2,
+      "apex_hits": 1,
+      "elo_hits": 2,
+      "apex_accuracy_pct": 50,
+      "margin_mae": 6.771,
+      "total_mae": 30.97
+    },
+    {
+      "date": "2026-10-24",
+      "games": 12,
+      "apex_hits": 6,
+      "elo_hits": 6,
+      "apex_accuracy_pct": 50,
+      "margin_mae": 12.434,
+      "total_mae": 13.493
+    },
+    {
+      "date": "2026-10-25",
+      "games": 8,
+      "apex_hits": 6,
+      "elo_hits": 6,
+      "apex_accuracy_pct": 75,
+      "margin_mae": 5.71,
+      "total_mae": 15.641
+    },
+    {
+      "date": "2026-10-26",
+      "games": 7,
+      "apex_hits": 6,
+      "elo_hits": 3,
+      "apex_accuracy_pct": 85.71,
+      "margin_mae": 12.652,
+      "total_mae": 14.273
+    }
+  ],
+  "market_result": {
+    "moneyline": "exploratory_replay",
+    "spread": "not_evaluable_no_verified_pregame_line",
+    "over_under": "not_evaluable_no_verified_pregame_line"
+  },
+  "warning": "Historical replay with simulated availability, not proven prospective skill; neither sportsbook edge nor betting return is estimated."
+}
