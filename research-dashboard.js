@@ -59,7 +59,7 @@
      const card=elt("article","pl-panel"),select=elt("select");card.append(elt("strong","",(window.NbaZh?window.NbaZh.teamShort(game.away):safe(game.away))+" 對 "+(window.NbaZh?window.NbaZh.teamShort(game.home):safe(game.home))));
      const started=game.date?new Date(game.date).getTime()<=Date.now():false;
      card.append(elt("p","pl-muted",(game.date?time(game.date)+" · ":"")+(started?"賽前舊快照（賽事可能已開打）":"賽前預測")));
-     select.style.cssText="display:block;width:100%;margin:12px 0;padding:12px;background:#0b172a;color:#fff;border:1px solid #526688;border-radius:10px";
+     select.style.cssText="display:block;width:100%;margin:12px 0;padding:12px;background:#FFFFFF;color:#242836;border:1px solid #DCE2EF;border-radius:10px";
      select.setAttribute("aria-label","玩法與隊伍");
      for(const [v,label] of [["ml_home","獨贏｜主隊"],["ml_away","獨贏｜客隊"],["spread_home","讓分／受讓｜主隊"],["spread_away","讓分／受讓｜客隊"],["total_over","大小分｜大分"],["total_under","大小分｜小分"]]){const o=elt("option","",label);o.value=v;select.append(o)}
      const view=elt("div");
@@ -133,7 +133,7 @@
      overview.textContent="三市場總覽 · 主隊獨贏 "+fmt(num(homeProb))+"｜主隊過盤 "+fmt(num(cover))+"｜大分 "+fmt(num(total&&total.over_probability_experimental));
      card.append(overview);
      const reportBlock=elt("details");
-     reportBlock.style.cssText="padding-top:10px;border-top:1px solid #42536a;margin-top:10px";
+     reportBlock.style.cssText="padding-top:10px;border-top:1px solid #E3E7F0;margin-top:10px";
      reportBlock.append(elt("summary","","中文三市場觀察報告（100–200 字）"));
      const observation=elt("p","pl-muted",report&&report.report_zh?report.report_zh:"報告尚未生成，請確認資料更新工作流程。");
      observation.style.cssText="font-size:14px;line-height:1.8;white-space:normal";
@@ -141,7 +141,7 @@
      if(local)reportBlock.append(elt("p","pl-muted","注意：上述原100–200字報告以國際盤為基準；台灣讓分及大小分的實際門檻與模型試算，請以上方選單及台灣盤為準。"));
      const evidence=report&&report.analyst;
      if(evidence){
-       const facts=elt("details");facts.style.cssText="padding:10px 0;border-top:1px solid #344a6c";
+       const facts=elt("details");facts.style.cssText="padding:10px 0;border-top:1px solid #E3E7F0";
        facts.append(elt("summary","","分析師數據證據與限制（依賽前時間回溯）"));
        const section=(name,value)=>facts.append(elt("p","pl-muted",name+"："+value));
        const f=evidence.form||{},h=f.home||{},a=f.away||{};
@@ -203,7 +203,7 @@
          const node=elt("p","pl-muted");
          const link=elt("a","",story.title||"ESPN 新聞報導");
          link.href=story.url;link.target="_blank";link.rel="noopener noreferrer";
-         link.style.cssText="color:#a6caff;text-decoration:underline";
+         link.style.cssText="color:#4456FE;text-decoration:underline";
          node.append(link,elt("span",""," · "+time(story.published_at_utc)));
          reportBlock.append(node);
        }
@@ -248,7 +248,7 @@
      if(typeof q.source_url==="string"&&q.source_url.startsWith("https://www.playsport.cc/")){
        const link=elt("a","","查看來源頁面");
        link.href=q.source_url;link.target="_blank";link.rel="noopener noreferrer";
-       link.style.cssText="color:#a6caff;text-decoration:underline";
+       link.style.cssText="color:#4456FE;text-decoration:underline";
        c.append(link);
      }
      box.append(c);
