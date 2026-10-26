@@ -25,7 +25,7 @@ class TestSevenDayReplayUI(unittest.TestCase):
         self.assertEqual(sum(x["apex_hits"] for x in d["by_day"]),27)
         self.assertEqual(sum(x["elo_hits"] for x in d["by_day"]),25)
         self.assertGreater(d["apex"]["brier"],d["elo"]["brier"])
-        self.assertIn("SIMULATED",d["simulation_assumption"])
+        self.assertIn("downloaded after games",d["simulation_assumption"])
 
     def test_market_validation_is_not_invented(self):
         market=self.data["market_result"]
