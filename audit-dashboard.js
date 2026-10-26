@@ -11,6 +11,7 @@
  const mlabels={moneyline:"獨贏",spread:"讓分／受讓",over:"大分",under:"小分",total:"大小分合計"};
  const note="注意：讓分與大小是試驗模型對賽前參考線的事後核對，來源再發布權限待確認，未驗證歷史 ATS／O-U 校準；命中率並非投注績效。";
  const state={};
+ let learningSummary=null;
  function metric(label,x){
   const card=el("div",undefined,"card");
   card.append(el("div",label,"eyebrow"));
@@ -68,11 +69,24 @@
   const expl=$("learning-status");
   expl.replaceChildren();
   expl.append(el("h2","目前是否具有自主進化 AI？"));
-  expl.append(el("p","目前還沒有能自主探索、反覆訓練、時序驗證、通過門檻後安全升級的自我進化系統。","lab-note"));
+  expl.append(el("p","已啟用受控自動學習：私人研究資料會事前凍結、賽後核對，週期性比較候選模型；但目前仍未具備可證明超越 Elo 的真實樣本外成果，也不會自行替換模型。","lab-note"));
+  if(learningSummary?.schema_version===1){
+    const s=learningSummary;
+    const snap=Date.parse(s.as_of_utc);
+    const stale=!Number.isFinite(snap)||Date.now()-snap>24*3600000;
+    const msg=el("p","私人研究進度（"+new Date(s.as_of_utc).toLocaleString("zh-TW",{timeZone:"Asia/Taipei"})+" 快照"+(stale?"，已過期":"")+"）："+
+      "賽前已封存 "+s.frozen_pregame_games+" 場；已有賽後驗證 "+s.labeled_pregame_games+" 場；目前主模型 "+s.incumbent.toUpperCase()+"。"+
+      "進階模型狀態："+s.candidate_retraining+"。此公開摘要是手動核對的快照，私人資料不會自動同步到公開網頁。","muted");
+    expl.append(msg);
+  }
+  const privateLink=el("a","開啟私人學習狀態（登入 GitHub 查看）");
+  privateLink.href="https://github.com/leonlin047/nba-paper-lab/blob/research-snapshots/learning_loop.json";
+  privateLink.rel="noopener noreferrer";privateLink.target="_blank";
+  expl.append(privateLink);
   for(const [a,b] of [
-   ["Elo","每次新賽果會調整球隊 Elo 分數；K=20、主場優勢65點、跨季回歸0.65等參數固定。這是分數遞推更新，不是模型自主進化。"],
+   ["Elo","球隊評分會隨賽果更新，另新增低資料量冷啟動凍結。K值、主場優勢等仍為固定參數；這些不等於模型自行進化。"],
    ["分差與總分","已有早期球季殘差擬合、2025–26 時序回放及實驗預測，但缺歷史經授權盤口的覆蓋率與校準，不能標成可用過盤勝率。"],
-   ["LightGBM／CatBoost","私人研究儲存庫有候選模型與 CPU 合成測試；尚未以已核准真實賽前特徵連續驗證並升級到此網站。"],
+   ["LightGBM／CatBoost","已接入每週私人 CPU 研究比較；若合格樣本不足便跳過訓練。候選模型只能待人工審核，尚未成為可驗證優於 Elo 的網頁預測模型。"],
    ["智慧報告","採固定規則整合近期比分、休息日、前季效率、傷病與試驗模型，並非能自行證明推論正確的語言智能。"],
    ["下一道升級門檻","先固定每場賽前資料與模型版本，建立獨立球季樣本外測試、Brier／Log Loss／校準與基準比較，再由人工審核是否換模型。"]
   ]){
@@ -80,9 +94,11 @@
   }
   expl.append(el("p",note,"lab-note"));
  }
- fetch("./data/pregame-audit.json",{cache:"no-store"})
- .then(r=>{if(!r.ok)throw Error("HTTP "+r.status);return r.json()})
- .then(data=>{
+ Promise.all([
+  fetch("./data/pregame-audit.json",{cache:"no-store"}).then(r=>{if(!r.ok)throw Error("HTTP "+r.status);return r.json()}),
+  fetch("./data/learning-status.json",{cache:"no-store"}).then(r=>r.ok?r.json():null).catch(()=>null)
+ ]).then(([data,status])=>{
+  learningSummary=status;
   if(data.schema_version!==1||data.model!=="elo_10season_chronological_fixed"||!Array.isArray(data.rows)||data.eligible_games!==19)throw Error("稽核資料與模型版本不符");
   selector.addEventListener("change",()=>show(data));
   market.addEventListener("change",()=>show(data));
