@@ -9,6 +9,7 @@ from report_engine import build_reports
 from elo_history import train_and_forecast
 from analyst_factors import extract_four_factors
 from score_model import evaluate_and_project,market_probabilities
+from core_odds import supplement
 UTC=dt.timezone.utc
 ROOT=pathlib.Path("data")
 ROOT.mkdir(exist_ok=True)
@@ -118,6 +119,10 @@ for g in to_supplement[:32]:
                 selected[key]=quoted
     except Exception as exc:
         errors.append("odds discovery "+str(g["id"])+": "+str(exc)[:80])
+# One bounded alternate public endpoint for still-missing near-term quotes.
+for quoted in supplement(games,selected,market_coverage,ROOT/"core-odds-status.json"):
+    key=(str(quoted["event_id"]),quoted["provider"])
+    if key not in selected or market_coverage(quoted)>market_coverage(selected[key]):selected[key]=quoted
 odds_discovery=list(selected.values())
 # Public NBA odds endpoint: normalize observed markets only, never synthesize quotes.
 # Treat upstream rights as review until authorized for public redistribution.

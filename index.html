@@ -7,20 +7,22 @@
   <meta name="description" content="墨場 COURT NOIR NBA 賽事研究平台。查看賽程、勝負與讓分大小分研究、封存預測成績、球隊及球員資料。">
   <link rel="icon" type="image/svg+xml" href="./assets/court-noir-mark.svg">
   <title>墨場 COURT NOIR｜NBA 賽事研究平台</title>
-  <link rel="stylesheet" href="./platform.css?v=20261028-noir2">
+  <link rel="stylesheet" href="./platform.css?v=20261028-cinema3">
   <script src="./localization.js" defer></script>
-  <script src="./platform.js?v=20261028-noir2" defer></script>
+  <script src="./platform.js?v=20261028-cinema3" defer></script>
 </head>
 <body>
-<section id="brand-intro" class="brand-intro" role="dialog" aria-modal="true" aria-labelledby="intro-title" hidden>
-  <div class="intro-top"><span>COURT NOIR · OPENING MOTION</span><button id="skip-intro" type="button">跳過開場 →</button></div>
-  <div class="intro-content"><img class="intro-emblem" src="./assets/court-noir-mark.svg" alt="" width="42" height="42"><p class="intro-eyebrow">BASKETBALL · BOOKS · COMPOSURE</p><h2 id="intro-title">墨場</h2><p class="intro-wordmark">COURT NOIR</p><img class="intro-crew" src="./assets/noir-entrance.svg?v=20261028-visible" alt="五位黑西裝英式平頂帽人物，拿著籃球與書本，並肩站在球場上" width="960" height="420"><p class="intro-motto">以球入場，以書立身。</p><div class="intro-rule" aria-hidden="true"></div></div>
-  <div class="intro-bottom"><span>EST. 2026</span><span>場上看局，場下有據。</span></div>
+<section id="brand-intro" class="brand-intro cinematic-intro" role="dialog" aria-modal="true" aria-labelledby="intro-title" hidden>
+  <div class="cinema-image"><img class="intro-crew" src="./assets/noir-crew-cinematic-v2.webp" alt="五位寫實美式西裝與禮帽人物站在夜間球場，中央人物攜書，前景有籃球" width="1024" height="1536" fetchpriority="high"></div>
+  <div class="cinema-shade" aria-hidden="true"></div><div class="cinema-light" aria-hidden="true"></div><div class="cinema-grain" aria-hidden="true"></div>
+  <div class="intro-top"><span>COURT NOIR · CHAPTER 02</span><button id="skip-intro" type="button">直接進入 →</button></div>
+  <div class="cinema-brand"><img src="./assets/court-noir-mark.svg" width="40" height="40" alt=""><p>KNOW THE GAME. HOLD YOUR GROUND.</p><h2 id="intro-title">墨場</h2><span>COURT NOIR</span></div>
+  <div class="cinema-entry"><p>以球入場，以書立身。</p><button id="enter-platform" type="button">進入賽事平台 <span>↗</span></button><button id="watch-intro" type="button">重播鏡頭動態</button><small>美式黑色電影群像 · 品牌進場</small></div>
 </section>
 <a class="skip" href="#content">跳至主要內容</a>
 <header class="topbar">
   <a class="brand" href="#games" aria-label="墨場 COURT NOIR 首頁"><img class="brand-symbol" src="./assets/court-noir-mark.svg" alt="" width="40" height="40"><span class="brand-name">墨場<small>COURT NOIR</small></span></a>
-  <div class="header-right"><span class="beta-label">內測版</span><button class="icon-button" id="refresh" aria-label="重新載入最新資料"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5M6 7a7 7 0 0 1 12-1l2 6M4 12l2 6a7 7 0 0 0 12-1"/></svg></button></div>
+  <div class="header-right"><button id="header-replay" class="header-replay" type="button">觀看開場</button><span class="beta-label">內測版</span><button class="icon-button" id="refresh" aria-label="重新載入最新資料"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5M6 7a7 7 0 0 1 12-1l2 6M4 12l2 6a7 7 0 0 0 12-1"/></svg></button></div>
 </header>
 <div class="app-shell">
 <nav class="primary-nav" aria-label="主要導覽">
@@ -39,7 +41,8 @@
     <div class="schedule-heading"><div><p class="eyebrow">PREGAME BRIEFING</p><h2 id="schedule-title">賽前預測</h2></div><div class="schedule-actions"><button id="go-today" class="text-button">今日賽果</button><button id="go-tomorrow" class="tomorrow-button">明日預測 ↗</button></div></div>
     <p id="selected-date-context" class="context-note"></p>
     <div id="schedule-dates" class="date-strip" aria-label="選擇比賽日期"></div>
-    <div class="filter-bar"><div id="forecast-models" class="segmented" aria-label="預測模型"><button data-model="elo" aria-pressed="true">Elo</button><button data-model="apex" aria-pressed="false">APEX</button><button data-model="ensemble" aria-pressed="false">Elo × APEX</button></div><span id="game-count" class="quiet"></span></div>
+    <div class="filter-bar"><div id="forecast-models" class="segmented" aria-label="預測模型"><button data-model="elo" aria-pressed="true">Elo</button><button data-model="apex" aria-pressed="false">APEX</button><button data-model="ensemble" aria-pressed="false">Elo × APEX</button><button data-model="factor" aria-pressed="false">計分實驗</button></div><span id="game-count" class="quiet"></span></div>
+    <div id="market-availability" class="market-availability" role="status"></div>
     <p class="context-note" id="model-context">Elo 勝率與比分推估供研究參考；讓分、大小分機率尚未完成盤口校準。</p>
     <div id="game-list" class="game-grid" aria-live="polite"></div>
     <div class="source-line" id="game-source"></div>
@@ -47,7 +50,7 @@
   <section id="page-results" class="page" hidden>
     <div class="page-heading"><div><p class="eyebrow">PREDICTION RECORD</p><h1>預測成績</h1><p class="subtitle">看得見當時的判斷，也核對最後的結果。</p></div></div>
     <div class="notice"><strong>先看紀錄，再談準確率</strong><p id="audit-scope">正在讀取封存紀錄…</p></div>
-    <div class="filter-bar results-filters"><label>日期<select id="result-day" aria-label="核對日期"></select></label><label>模型<select id="result-model"><option value="elo">Elo 封存核對</option><option value="apex">APEX 真實賽前</option><option value="ensemble">Elo × APEX 真實賽前</option><option value="online">增量模型真實賽前</option></select></label><label>項目<select id="result-market"><option value="all">全部項目</option><option value="moneyline">勝負</option><option value="spread">讓分／受讓</option><option value="total">大小分</option></select></label></div>
+    <div class="filter-bar results-filters"><label>日期<select id="result-day" aria-label="核對日期"></select></label><label>模型<select id="result-model"><option value="elo">Elo 封存核對</option><option value="apex">APEX 真實賽前</option><option value="ensemble">Elo × APEX 真實賽前</option><option value="online">增量模型真實賽前</option><option value="factor">計分因子：實測與前瞻</option></select></label><label>項目<select id="result-market"><option value="all">全部項目</option><option value="moneyline">勝負</option><option value="spread">讓分／受讓</option><option value="total">大小分</option></select></label></div>
     <div id="result-metrics" class="metric-grid"></div>
     <div class="section-heading"><h2>逐場核對</h2><span class="quiet" id="result-count"></span></div>
     <div id="result-list" aria-live="polite"></div>
@@ -62,9 +65,10 @@
     <div class="page-heading"><div><p class="eyebrow">ABOUT COURT NOIR</p><h1>用紀錄，建立信任。</h1><p class="subtitle">一個把預測、資料與驗證放在同一條脈絡的籃球分析平台。</p></div></div>
     <div class="platform-intro"><span class="small-label">目前階段</span><h2>持續驗證的內測平台</h2><p>目前以 Elo 提供公開研究預測，APEX 與融合方案累積真實賽前證據後再評估。模型更新必須經驗證與人工審核，不會因少量比賽的短期成績自動升級。</p></div>
     <div class="section-heading"><h2>模型與整合狀態</h2><span class="quiet">如實呈現進度</span></div><div id="model-status" class="model-grid"></div>
+    <div id="factor-overview" class="panel factor-overview"></div>
     <div class="section-heading"><h2>資料如何持續累積</h2></div><div id="integration-summary" class="panel"></div>
     <div class="section-heading"><h2>資料與使用說明</h2></div><div class="panel text-panel"><h3>來源與更新</h3><p>公開賽程、球員比賽數據及傷停由現有資料收集流程更新；每個頁面標示擷取時間。私人模型進度以人工確認的彙總快照呈現，超過 24 小時會提醒重新核對。</p><h3>內測與後續服務</h3><p>目前未開放訂閱或收款。資料來源的商業使用與再散布權利仍須確認，完成授權及長期模型驗證後才適合提供付費服務。</p><h3>研究定位</h3><p>球員能力、預估上場時間和勝率屬於推估，不能視為已知事實；傷停未列名也不等於健康。任何模型均不保證賽果或收益。</p><div class="text-links"><a href="./research.html">完整研究紀錄 ↗</a><a href="https://official.nba.com/nba-injury-report-2026-27-season/" target="_blank" rel="noopener noreferrer">NBA 官方傷情報告 ↗</a></div></div>
-    <div class="panel factor-research-entry"><span class="small-label">研究進行中</span><h3>把球場線索，變成可核對的加減分。</h3><p>計數因子評分卡正在設計：每條規則都要有來源、時間戳與獨立驗證，尚未影響現有預測。</p><a href="https://github.com/leonlin047/nba-paper-lab-web/blob/main/docs/COUNTABLE_FACTORS_RESEARCH_20261028.md">閱讀論文研究與評分卡草案 ↗</a></div>
+    <div class="panel factor-research-entry"><span class="small-label">實測完成 · 實驗上線</span><h3>把球場線索，變成可核對的加減分。</h3><p>計數因子已完成歷史實測並以實驗模式上線，可查看每項加減分、基準比較與賽前封存；目前未取代 Elo 主模型。</p><a href="https://github.com/leonlin047/nba-paper-lab-web/blob/main/docs/COUNTABLE_FACTORS_RESEARCH_20261028.md">閱讀論文研究與評分卡草案 ↗</a></div>
     <button id="replay-intro" class="text-button intro-replay" type="button">重播品牌開場 ↗</button>
     <div id="platform-asof" class="source-line"></div>
   </section>

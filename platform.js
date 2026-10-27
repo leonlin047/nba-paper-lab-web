@@ -12,7 +12,8 @@
     const next=pending.map(g=>day(g.date)).filter(d=>d>=current).sort()[0];return next||current;
   }
   function pregameReport(game, report, model="elo", now=Date.now()) {
-    if(model!=="elo"||game.status!=="pre"||Date.parse(game.date)<=now||!report||!validBefore(report.generated_at_utc,game.date))return null;
+    if(!["elo","factor"].includes(model)||game.status!=="pre"||Date.parse(game.date)<=now||!report||!validBefore(report.generated_at_utc,game.date))return null;
+    if(model==="factor"&&!report.factor_forecast)return null;
     if(String(report.event_id)!==String(game.id)||canonical(report.home)!==canonical(game.home)||canonical(report.away)!==canonical(game.away))return null;
     return typeof report.report_zh==="string"&&report.report_zh.trim()?report.report_zh.trim():null;
   }
@@ -81,18 +82,23 @@
   function playIntro(force=false) {
     if(introPlaying)return;
     const overlay=$("brand-intro"),reduce=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if(reduce){$("replay-intro").textContent="減少動態：品牌開場已略過";$("replay-intro").disabled=true;return;}
-    try{if(!force&&sessionStorage.getItem("court-noir-intro-v1"))return;sessionStorage.setItem("court-noir-intro-v1","seen");}catch{/* Storage restrictions must not block the app. */}
+    // The user explicitly enters the platform; session memory must not hide it.
+    // Reduced-motion visitors see the same static cover with working controls.
+    overlay.classList.toggle("motion-reduced",reduce);
     const previous=document.activeElement,background=[document.querySelector(".topbar"),document.querySelector(".app-shell")];
-    let timer,finished=false;introPlaying=true;overlay.hidden=false;overlay.classList.remove("intro-leaving");background.forEach(n=>n.inert=true);document.body.classList.add("intro-active");
-    // Restart the decorative SVG when the user explicitly requests replay.
-    const crew=overlay.querySelector(".intro-crew");crew.replaceWith(crew.cloneNode(true));
-    const key=e=>{if(e.key==="Escape")finish();if(e.key==="Tab"){e.preventDefault();$("skip-intro").focus();}};
-    const finish=()=>{if(finished)return;finished=true;clearTimeout(timer);document.removeEventListener("keydown",key);overlay.classList.add("intro-leaving");setTimeout(()=>{overlay.hidden=true;overlay.classList.remove("intro-leaving");background.forEach(n=>n.inert=false);document.body.classList.remove("intro-active");introPlaying=false;if(previous&&previous!==document.body)previous.focus();else $("content").focus({preventScroll:true});},220);};
-    $("skip-intro").onclick=finish;document.addEventListener("keydown",key);$("skip-intro").focus({preventScroll:true});timer=setTimeout(finish,3400);
+    let finished=false;introPlaying=true;overlay.hidden=false;overlay.classList.remove("intro-leaving");background.forEach(n=>n.inert=true);document.body.classList.add("intro-active");
+    const controls=[$("skip-intro"),$("enter-platform"),$("watch-intro")];
+    const key=e=>{if(e.key==="Escape")finish();if(e.key==="Tab"){const index=controls.indexOf(document.activeElement);e.preventDefault();controls[(index+(e.shiftKey?-1:1)+controls.length)%controls.length].focus();}};
+    const finish=()=>{if(finished)return;finished=true;document.removeEventListener("keydown",key);overlay.classList.add("intro-leaving");setTimeout(()=>{overlay.hidden=true;overlay.classList.remove("intro-leaving");background.forEach(n=>n.inert=false);document.body.classList.remove("intro-active");introPlaying=false;if(previous&&previous!==document.body)previous.focus();else $("content").focus({preventScroll:true});},220);};
+    const restart=()=>{const old=overlay.querySelector(".cinema-image"),fresh=old.cloneNode(true);old.replaceWith(fresh);};
+    $("skip-intro").onclick=finish;$("enter-platform").onclick=finish;$("watch-intro").onclick=restart;document.addEventListener("keydown",key);$("enter-platform").focus({preventScroll:true});restart();
   }
+  function factorFor(g){return state.files["factor-scorecard"]?.forecasts?.find(f=>String(f.event_id)===String(g.id)&&canonical(f.home)===canonical(g.home)&&canonical(f.away)===canonical(g.away)&&validBefore(f.generated_at_utc,g.date));}
+  function factorReport(f){return {event_id:f.event_id,date:f.date,home:f.home,away:f.away,generated_at_utc:f.generated_at_utc,factor_forecast:true,report_zh:f.report_zh,markets:{spread:{home_line:f.market.home_line,away_line:f.market.home_line===null?null:-f.market.home_line,home_cover_probability_experimental:f.cover?.positive,away_cover_probability_experimental:f.cover?.negative},total:{line:f.market.total_line,expected_total:f.expected_total,over_probability_experimental:f.totals?.positive,under_probability_experimental:f.totals?.negative}},analyst:{projection:{expected_margin:f.expected_margin,expected_total:f.expected_total},market_observation:{provider:f.market.provider,captured_at_utc:f.market.captured_at_utc}},factor:f};}
   function marketsFor(g) {
-    if(state.model!=="elo" || g.status!=="pre" || Date.parse(g.date)<=Date.now())return null;
+    if(g.status!=="pre" || Date.parse(g.date)<=Date.now())return null;
+    if(state.model==="factor"){const f=factorFor(g);return f?{report:factorReport(f),probability:f.home_win_probability}:null;}
+    if(state.model!=="elo")return null;
     const r=state.files.reports?.reports?.find(r=>String(r.event_id)===String(g.id) && canonical(r.home)===canonical(g.home) && canonical(r.away)===canonical(g.away) && validBefore(r.generated_at_utc,g.date));
     const pred=state.files.research?.predictions?.find(p=>String(p.event_id)===String(g.id) && validBefore(state.files.research.updated_at_utc,g.date));
     return r||pred?{report:r,probability:numeric(pred?.home_win_probability) ?? numeric(r?.markets?.moneyline?.home_probability_experimental)}:null;
@@ -103,9 +109,11 @@
     const probability=m.probability,spread=m.report?.markets?.spread,total=m.report?.markets?.total;
     if(probability!==null)cells.push(["勝負",team(probability>=.5?g.home:g.away),pct(probability>=.5?probability:1-probability)]);else cells.push(["勝負","未提供","—"]);
     const cover=numeric(spread?.home_cover_probability_experimental);
-    if(cover!==null && numeric(spread?.home_line)!==null) {const home=cover>=.5;cells.push(["讓分／受讓",`${team(home?g.home:g.away)} ${signed(home?spread.home_line:spread.away_line)}`,pct(home?cover:1-cover)]);}else cells.push(["讓分／受讓","盤口未齊","—"]);
+    const awayCover=numeric(spread?.away_cover_probability_experimental);
+    if(cover!==null && numeric(spread?.home_line)!==null) {const home=awayCover===null?cover>=.5:cover>=awayCover;cells.push(["讓分／受讓",`${team(home?g.home:g.away)} ${signed(home?spread.home_line:spread.away_line)}`,pct(home?cover:awayCover)]);}else {const margin=m.report?.analyst?.projection?.expected_margin;cells.push(["讓分／受讓",numeric(margin)===null?"盤口未齊":`主淨勝 ${signed(Number(margin).toFixed(1))}`,"模型估計・待盤口"]);}
     const over=numeric(total?.over_probability_experimental);
-    if(over!==null && numeric(total?.line)!==null)cells.push(["大小分",`${over>=.5?"大":"小"} ${total.line}`,pct(over>=.5?over:1-over)]);else cells.push(["大小分","盤口未齊","—"]);
+    const under=numeric(total?.under_probability_experimental);
+    if(over!==null && numeric(total?.line)!==null){const pickOver=under===null?over>=.5:over>=under;cells.push(["大小分",`${pickOver?"大":"小"} ${total.line}`,pct(pickOver?over:under)]);}else {const expected=m.report?.analyst?.projection?.expected_total;cells.push(["大小分",numeric(expected)===null?"盤口未齊":`估 ${fmt(expected)} 分`,"模型估計・待盤口"]);}
     return cells;
   }
   function renderGames() {
@@ -115,7 +123,9 @@
     $("schedule-title").textContent=state.date===tomorrow?"明日預測":state.date===today?"今日賽事":`${state.date.slice(5).replace("-"," / ")} 賽事預測`;
     $("selected-date-context").textContent=`${state.date} · 台北時間 UTC+8 · ${games.length} 場${state.date===tomorrow?"，各場附中文賽前報告":""}`;
     $("go-tomorrow").setAttribute("aria-pressed",String(state.date===tomorrow));
-    $("model-context").textContent=state.model==="elo"?"Elo 勝率與比分推估供研究參考；讓分、大小分機率尚未完成盤口校準。已完賽場次不使用賽後預測回填。":state.model==="apex"?"APEX v2.1 已整合至私人研究流程，尚無獲准公開的真實賽前預測；目前不顯示候補模型的模擬數字。":"Elo × APEX 融合已完成研究實作，仍在累積有效賽前紀錄，尚未成為公開主模型。";
+    $("model-context").textContent=state.model==="factor"?"計分實驗已跑歷史實測。分數以主隊／大分為正；每場重新計算，未知項目另列。改善幅度很小且信賴區間包含零，尚未取代 Elo。":state.model==="elo"?"Elo 勝率與比分推估供研究參考；讓分、大小分機率尚未完成盤口校準。無盤口時只列模型淨勝／總分估計，不捏造過盤方向。":state.model==="apex"?"APEX v2.1 已整合至私人研究流程，尚無獲准公開的真實賽前預測；目前不顯示候補模型的模擬數字。":"Elo × APEX 融合已完成研究實作，仍在累積有效賽前紀錄，尚未成為公開主模型。";
+    const quoted=games.filter(g=>{const m=state.files.reports?.reports?.find(r=>String(r.event_id)===String(g.id));return numeric(m?.markets?.spread?.home_line)!==null&&numeric(m?.markets?.total?.line)!==null;}).length;
+    $("market-availability").textContent=`本日 ${games.length} 場 · ${quoted} 場已取得讓分與總分線 · ${games.length-quoted} 場待來源報價。模型估計與實際盤口分開顯示。`;
     if(!games.length)empty(target,"這一天沒有可用賽程","可切換其他日期；缺少資料不代表當天一定沒有比賽。");
     for(const g of games) {
       const card=el("article","game-card"),top=el("div","game-top");
@@ -132,7 +142,8 @@
       if(cells){const grid=el("div","market-grid");for(const [label,pick,p] of cells){const c=el("div","market-cell");c.append(el("span","",label),el("strong","",pick),el("em","",p));grid.append(c);}card.append(grid);}
       else card.append(el("div","model-unavailable",g.status==="post"?"賽事已結束 · 當時預測請至「預測成績」查核封存紀錄。":g.status==="in"?"比賽進行中 · 不新增賽前預測。":state.model==="elo"?"尚無符合時序的公開預測。":"此模型尚無可公開的賽前預測。"));
       const report=marketsFor(g)?.report,brief=pregameReport(g,report,state.model);
-      if(brief){const n=el("section","game-brief"),head=el("div","brief-heading");head.append(el("h3","","中文賽前報告"),el("span","",`${[...brief].length} 字 · Elo`));n.append(head,el("p","",brief),el("div","brief-source",`產生 ${stamp(report.generated_at_utc)}（台北） · 以公開資料摘要，非已驗證投注績效`));card.append(n);}
+      if(brief){const n=el("section","game-brief"),head=el("div","brief-heading");head.append(el("h3","","中文賽前報告"),el("span","",`${[...brief].length} 字 · ${state.model==="factor"?"計分實驗":"Elo"}`));n.append(head,el("p","",brief),el("div","brief-source",`產生 ${stamp(report.generated_at_utc)}（台北） · 以公開資料摘要，非已驗證投注績效`));card.append(n);}
+      if(state.model==="factor"&&report?.factor)card.append(factorBreakdown(report.factor));
       const bottom=el("div","card-bottom");bottom.append(el("span","",g.venue||"場館待提供"));const open=el("button","text-button","單場分析 ↗");open.addEventListener("click",()=>openGame(g));bottom.append(open);card.append(bottom);target.append(card);
     }
     const updated=state.files.games?.captured_at;$("game-source").textContent=`來源：ESPN 公開賽事資料 · 擷取 ${stamp(updated)}（台北）${Date.now()-Date.parse(updated)>86400000?" · 資料超過 24 小時，請核對最新狀態":""}`;
@@ -144,9 +155,29 @@
     const days=[...new Set((audit?.rows||[]).map(r=>r.date_taiwan).concat(today))].sort().reverse();for(const d of days)option(d,`${d}${d===today?"（今天）":""}`);
     $("audit-scope").textContent=audit?`目前公開逐場核對涵蓋 ${audit.report_period_taiwan.join(" 至 ")}。${today} 的最新私人核對尚未完整同步至此頁。讓分與大小分的盤口來源未驗證，以下為研究方向核對。` : "封存資料暫時無法讀取，未顯示成績。";
   }
+  function factorBreakdown(f) {
+    const box=el("details","factor-breakdown"),summary=el("summary","","逐項加減分 · 查看依據");box.append(summary);
+    const totals=el("div","factor-totals");for(const [key,label]of [["moneyline","勝負"],["margin","分差"],["total","總分"]]){const part=f.scores[key],n=el("div");n.append(el("span","",label),el("strong","",`${signed(part.score)} 分`),el("small","",`${part.known}/${part.possible} 項可確認`));totals.append(n);}box.append(totals);
+    for(const [key,label]of [["moneyline","勝負"],["margin","分差"],["total","總分"]]){box.append(el("h4","",label));for(const part of f.scores[key].parts){const line=el("div","factor-line");line.append(el("span","",part.label),el("strong",part.points===null?"quiet":"",part.points===null?"未確認":`${signed(part.points)} 分`));box.append(line);}}
+    box.append(el("p","",`正分支持主隊／大分，負分支持客隊／小分。零權重表示訓練未選用；未知項目不當成已確認的零。休息與密集賽程合計最多 ±2 分。分數每場重置，不跨場累加。`),el("small","",`${f.model_version} · 輸入截至 ${stamp(f.last_input_game)} · 盤口擷取 ${stamp(f.market.captured_at_utc)}`));
+    if(f.cover?.push>0||f.totals?.push>0)box.append(el("p","",`整數盤走盤機率：讓分 ${pct(f.cover?.push)}，總分 ${pct(f.totals?.push)}。主客／大小機率與走盤合計為 100%。`));return box;
+  }
+  function renderFactorResults(target,metrics) {
+    const d=state.files["factor-scorecard"];if(!d){empty(target,"計分實驗資料暫時無法讀取","重新整理後可再查閱。");return;}
+    const v=d.validation,m=v.metrics,p=d.prospective,ci=(x,digits)=>x.map(n=>n.toFixed(digits)).join(" 至 ");
+    metrics.append(metricCard("歷史勝負",`${m.moneyline.candidate.correct} / ${m.moneyline.candidate.n}`,`基準 ${m.moneyline.baseline.correct} 場；Brier ${m.moneyline.candidate.brier.toFixed(5)}（越低越好）`),metricCard("歷史分差 MAE",m.margin.candidate.mae.toFixed(3),`基準 ${m.margin.baseline.mae.toFixed(3)} 分；越低越好`),metricCard("歷史總分 MAE",m.total.candidate.mae.toFixed(3),`基準 ${m.total.baseline.mae.toFixed(3)} 分；越低越好`));
+    $("result-count").textContent=`歷史測試 ${v.test_n} 場 · 本版真正賽前封存 ${p.frozen_current_model} 場 · 已結算 ${p.settled} 場`;
+    const note=el("article","result-row");note.append(el("h3","","歷史實測 · 尚未證明穩定優勢"),el("p","context-note",`訓練：賽季結束年 2023、2024 共 ${v.train_n} 場；2025 年 ${v.validation_n} 場選擇調整幅度；2026 年 ${v.test_n} 場測試。所有特徵只使用較早台北比賽日資料，同日賽果不入模。此測試季曾用於先前研究，並非全新外部驗證。`),el("p","context-note",`按比賽日重抽樣的改善 95% 區間：勝率 Brier ${ci(m.moneyline.improvement_ci95_day_bootstrap,5)}；分差 MAE ${ci(m.margin.improvement_ci95_day_bootstrap,3)} 分；總分 MAE ${ci(m.total.improvement_ci95_day_bootstrap,3)} 分。三者皆跨過零，維持實驗狀態，未自動取代 Elo。`));target.append(note);
+    const replay=d.odds_replay,rs=replay.summary,box=el("article","result-row");box.append(el("h3","","真實舊盤口重播 · 另計樣本"),el("p","context-note",`讓分／受讓 ${rs.spread.correct}/${rs.spread.n}（基準 ${rs.spread.baseline_correct}/${rs.spread.n}）；大小分 ${rs.total.correct}/${rs.total.n}（基準 ${rs.total.baseline_correct}/${rs.total.n}）。只採有來源、開賽前至少 60 分鐘擷取的實際盤口。這是今天的因子重跑舊賽事，並非當時已發布預測，樣本很小。`));target.append(box);
+    for(const r of replay.rows){const card=el("article","result-row"),heading=el("div","result-title");heading.append(el("span","",`${team(r.away)} @ ${team(r.home)}`),el("time","",r.day));card.append(heading);const picks=el("div","result-picks");for(const [k,label]of [["spread","讓分／受讓"],["total","大小分"]]){const item=r[k],n=el("div");n.append(el("span","",label),el("strong","",!item?"盤口未齊":k==="total"?`${item.pick==="positive"?"大":"小"} ${item.line}`:`${team(item.pick==="positive"?r.home:r.away)} ${signed(item.pick==="positive"?item.line:-item.line)}`),el("div",item?.push?"quiet":item?.hit?"hit":"miss",!item?"無法核對":item.push?"走盤":item.hit?"✓ 相符":"× 未符"));picks.append(n);}card.append(picks,el("p","result-proof",`歷史重播 · 真實盤口擷取 ${stamp(r.line_observed_at)}（台北）`));target.append(card);}
+    const live=el("article","result-row");live.append(el("h3","","真正賽前前瞻紀錄"),el("p","context-note",`目前 ${p.frozen_current_model} 場首次預測已鎖定，${p.settled} 場結算。${p.settled?`勝負 ${p.moneyline_correct}/${p.settled}。`:"尚無本版真正賽前命中率。"}開賽前至少 60 分鐘首次封存，後續更新不覆寫；賽後由既有排程自動核對。`),link("完整因子測試與資料限制 ↗","https://github.com/leonlin047/nba-paper-lab-web/blob/main/docs/FACTOR_SCORECARD_RELEASE.md","audit-link"));
+    const records=(state.files["factor-pregame-ledger"]?.records||[]).filter(r=>r.model_version===d.model_version),pending=el("details","factor-ledger"),heading=el("summary","",`查看 ${records.length} 場首次封存與結算`);pending.append(heading);
+    for(const r of records){const line=el("div","ledger-row"),outcome=r.settlement;line.append(el("strong","",`${team(r.away)} @ ${team(r.home)} · ${day(r.date)}`),el("small","",`首次封存 ${stamp(r.frozen_at_utc)} · 預估主勝 ${pct(r.home_win_probability)}`));const cover=r.cover,total=r.totals,home=cover?cover.positive>=cover.negative:null,over=total?total.positive>=total.negative:null;line.append(el("p","",`讓分：${cover?`${team(home?r.home:r.away)} ${signed(home?r.market.home_line:-r.market.home_line)}`:"待實際盤口"}；大小：${total?`${over?"大":"小"} ${r.market.total_line}`:"待實際盤口"}`));const status=x=>!x?"無盤口":x.push?"走盤":x.hit?"相符":"未符";line.append(el("p","",outcome?`實際主隊淨勝 ${signed(outcome.actual_margin)}，合計 ${outcome.actual_total} 分 · 勝負 ${outcome.moneyline_hit?"相符":"未符"} / 讓分 ${status(outcome.spread)} / 大小 ${status(outcome.total)}`:"待完賽；尚未計入真正賽前命中率。"));pending.append(line);}live.append(pending,link("原始首次封存與結算 JSON ↗","./data/factor-pregame-ledger.json","audit-link"));target.append(live);
+  }
   function renderResults() {
     const target=$("result-list"),metrics=$("result-metrics");target.replaceChildren();metrics.replaceChildren();
     const model=$("result-model").value,date=$("result-day").value,market=$("result-market").value;
+    const factor=model==="factor";$("result-day").disabled=factor;$("result-market").disabled=factor;$("audit-scope").textContent=factor?"計分實驗分列歷史測試、真實舊盤口重播、真正賽前前瞻三種證據。以下為完整測試範圍，不套用日期或市場篩選。":"Elo 為既有公開封存核對；讓分與大小分的盤口來源未驗證，只作研究方向核對。";if(factor){renderFactorResults(target,metrics);return;}
     const rows=model==="elo"?(state.files["pregame-audit"]?.rows||[]).filter(r=>date==="all"||r.date_taiwan===date):[];
     const definitions=[["moneyline","勝負"],["spread","讓分／受讓"],["total","大小分"]];
     for(const [key,label]of definitions){const t=tally(rows,key),c=metricCard(label,t.n?`${t.correct} / ${t.n}`:"—",t.n?`方向命中 ${(t.correct/t.n*100).toFixed(1)}%${key==="moneyline"?"":" · 盤口來源未驗證"}`:"尚無有效封存結果");metrics.append(c);}
@@ -191,15 +222,17 @@
   function openGame(g) {
     const title=el("h2","",`${team(g.away)} vs ${team(g.home)}`);title.id="dialog-title";
     const content=[title,el("p","subtitle",`${stamp(g.date)}（台北） · ${g.venue||"場館未提供"}`)],cells=predictionCells(g),report=marketsFor(g)?.report;
-    if(cells){const grid=el("div","metric-grid");for(const [label,pick,p]of cells)grid.append(metricCard(label,pick,`研究機率 ${p}`));content.push(grid,el("p","dialog-subtitle",`Elo 研究輸出 · 產生 ${stamp(report?.generated_at_utc||state.files.research?.updated_at_utc)} · 盤口 ${report?.analyst?.market_observation?.provider||"來源未提供"} / ${stamp(report?.analyst?.market_observation?.captured_at_utc)}`));}
+    if(cells){const grid=el("div","metric-grid");for(const [label,pick,p]of cells)grid.append(metricCard(label,pick,p));content.push(grid,el("p","dialog-subtitle",`${state.model==="factor"?"計分實驗":"Elo"} 研究輸出 · 產生 ${stamp(report?.generated_at_utc||state.files.research?.updated_at_utc)} · 盤口 ${report?.analyst?.market_observation?.provider||"來源未提供"} / ${stamp(report?.analyst?.market_observation?.captured_at_utc)}`));}
     else content.push(el("p","context-note",g.status==="post"?"已完賽。不使用賽後重算填入當時預測；請在預測成績頁查核已封存場次。":"此模型目前沒有符合時序的公開賽前預測。"));
     const brief=pregameReport(g,report,state.model);if(brief){const n=el("section","panel match-report");n.append(el("h3","",`中文賽前報告 · ${[...brief].length} 字`),el("p","",brief));content.push(n);}
+    if(report?.factor)content.push(factorBreakdown(report.factor));
     const analysis=el("div","game-analysis");for(const t of [g.away,g.home]){const n=el("div"),form=report?.analyst?.form?.[canonical(t)===canonical(g.home)?"home":"away"],recent=recentTeam(t);n.append(el("h3","",fullTeam(t)));if(form?.n)n.append(el("p","",`賽前近況樣本 ${form.n} 場`),el("p","",`場均得分 ${fmt(form.avg_scored)} / 失分 ${fmt(form.avg_allowed)}`),el("p","",`近 5 場 ${form.last5_wins ?? "—"} 勝 · 休息 ${fmt(form.rest_days)} 天`));else n.append(el("p","",`目前資料中 ${recent.length} 場例行賽近況`));analysis.append(n);}content.push(el("h3","","球隊近況"),analysis,el("h3","","相關傷停"));
     const injuries=(state.files.injuries?.injuries||[]).filter(i=>[canonical(g.home),canonical(g.away)].includes(canonical(i.team)));if(injuries.length)for(const i of injuries)content.push(injuryCard(i));else content.push(el("p","dialog-subtitle","目前未收錄相關傷停公告，不代表全員健康。"));
     const detail=state.files.games?.details?.find(d=>String(d.event_id)===String(g.id));if(detail?.boxscore?.length){content.push(el("h3","","單場球員數據"));for(const b of detail.boxscore){const panel=el("div","panel");panel.append(el("h3","",fullTeam(b.team)));for(const p of b.players||[])panel.append(el("div","",`${player(p.name)} · ${p.stats?.MIN ?? "—"} 分鐘 / ${p.stats?.PTS ?? "—"} 分 / ${p.stats?.REB ?? "—"} 籃板 / ${p.stats?.AST ?? "—"} 助攻`));content.push(panel);}}
     content.push(el("p","dialog-subtitle","球隊近況為描述性資料。傷停與球員因子尚未加入公開模型權重，不代表已量化其因果影響。"));openDialog(content);
   }
   function renderPlatform() {
+    const factor=state.files["factor-scorecard"],overview=$("factor-overview");overview.replaceChildren();overview.append(el("h3","","計分因子 · 已實測並開啟前瞻封存"));if(factor){const v=factor.validation;overview.append(el("p","",`已完成 ${v.test_n} 場歷史測試，以及 ${factor.odds_replay.rows.length} 場真實舊盤口重播。勝負與分差各 4 項、總分 3 項候選因子；整數權重限定 −2 至 +2，未知項目獨立標示。休息與賽程密度合計最多兩分。`),el("p","",`小幅改善仍在統計誤差內，維持實驗模型。當前 ${factor.prospective.frozen_current_model} 場真正賽前封存、${factor.prospective.settled} 場已結算。舊資料未變時直接沿用訓練快取，本次舊樣本重訓 ${factor.cache.old_samples_refit} 場；時序完整性仍會檢查。`),el("p","source-line",`${factor.model_version} · ${stamp(factor.generated_at_utc)}（台北）`));}else overview.append(el("p","","計分資料暫時無法讀取。"));
     const s=state.files["integration-status"],target=$("model-status");target.replaceChildren();if(!s){empty(target,"狀態暫時無法讀取","未以過期模型狀態代替最新紀錄。");return;}
     const defs=[["Elo","公開研究主模型",`${s.models.elo.frozen} 場私人賽前封存，${s.models.elo.labeled} 場已連結賽果。公開預測依原賽事資料流程更新。`],["APEX v2.1","候補模型 · 累積證據",`有效賽前核對 ${s.models.apex.evaluated} / ${s.models.apex.minimum} 場；尚無獲准公開的真實賽前預測。`],["Elo × APEX","融合研究已實作","使用一致的機率融合與歷史資料選權重；目前仍為候補，尚未證明優於 Elo。"],["增量學習","只學習新樣本",`已學習 ${s.models.online.trained} / ${s.models.online.minimum} 場；本次舊樣本重訓 ${s.models.online.old_pairs_retrained} 場。樣本足夠前不發布預測。`]];
     for(const [name,label,text]of defs){const n=el("div","model-card");n.append(el("span","model-label",label),el("h3","",name),el("p","",text));if(name==="增量學習"){const bar=el("div","progress"),fill=el("div");fill.style.width=`${Math.min(100,s.models.online.trained/s.models.online.minimum*100)}%`;bar.append(fill);n.append(bar);}target.append(n);}
@@ -209,7 +242,7 @@
   }
   async function init() {
     $("today-label").textContent=today.replaceAll("-"," / ");
-    const names=["games","research","reports","pregame-audit","injuries","integration-status"];
+    const names=["games","research","reports","pregame-audit","injuries","integration-status","factor-scorecard","factor-pregame-ledger"];
     const outcomes=await Promise.allSettled(names.map(async name=>{const r=await fetch(`./data/${name}.json`,{cache:"no-store"});if(!r.ok)throw new Error(String(r.status));return r.json();}));
     outcomes.forEach((r,i)=>{if(r.status==="fulfilled")state.files[names[i]]=r.value;else state.failed.push(names[i]);});
     state.date=scheduleDate(state.files.games?.games||[],Date.now(),new URLSearchParams(location.search).get("date")||"");
@@ -224,6 +257,7 @@
   for(const id of ["result-day","result-market","result-model"])$(id).addEventListener("change",renderResults);
   $("data-search").addEventListener("input",renderData);$("refresh").addEventListener("click",()=>location.reload());$("dialog-close").addEventListener("click",()=>$("game-dialog").close());
   $("go-today").addEventListener("click",()=>selectSchedule(today));$("go-tomorrow").addEventListener("click",()=>selectSchedule(tomorrow));
+  $("header-replay").addEventListener("click",()=>playIntro(true));
   $("replay-intro").addEventListener("click",()=>playIntro(true));
   $("game-dialog").addEventListener("click",e=>{if(e.target===$("game-dialog")){const r=e.target.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)e.target.close();}});
   window.addEventListener("hashchange",()=>setPage(location.hash.slice(1),false));
