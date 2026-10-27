@@ -77,16 +77,18 @@
     const active=target.querySelector('[aria-pressed="true"]');if(active)target.scrollLeft=Math.max(0,active.offsetLeft-target.offsetLeft-80);
   }
   function selectSchedule(date) {state.date=date;const url=new URL(location.href);url.searchParams.set("date",date);url.hash="games";history.replaceState(null,"",url);setPage("games",false);renderDates();}
+  let introPlaying=false;
   function playIntro(force=false) {
+    if(introPlaying)return;
     const overlay=$("brand-intro"),reduce=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if(reduce){$("replay-intro").textContent="減少動態：品牌開場已略過";$("replay-intro").disabled=true;return;}
     try{if(!force&&sessionStorage.getItem("court-noir-intro-v1"))return;sessionStorage.setItem("court-noir-intro-v1","seen");}catch{/* Storage restrictions must not block the app. */}
     const previous=document.activeElement,background=[document.querySelector(".topbar"),document.querySelector(".app-shell")];
-    let timer,finished=false;overlay.hidden=false;overlay.classList.remove("intro-leaving");background.forEach(n=>n.inert=true);document.body.classList.add("intro-active");
+    let timer,finished=false;introPlaying=true;overlay.hidden=false;overlay.classList.remove("intro-leaving");background.forEach(n=>n.inert=true);document.body.classList.add("intro-active");
     // Restart the decorative SVG when the user explicitly requests replay.
     const crew=overlay.querySelector(".intro-crew");crew.replaceWith(crew.cloneNode(true));
     const key=e=>{if(e.key==="Escape")finish();if(e.key==="Tab"){e.preventDefault();$("skip-intro").focus();}};
-    const finish=()=>{if(finished)return;finished=true;clearTimeout(timer);document.removeEventListener("keydown",key);overlay.classList.add("intro-leaving");background.forEach(n=>n.inert=false);document.body.classList.remove("intro-active");if(previous&&previous!==document.body)previous.focus();else $("content").focus({preventScroll:true});setTimeout(()=>{overlay.hidden=true;overlay.classList.remove("intro-leaving");},220);};
+    const finish=()=>{if(finished)return;finished=true;clearTimeout(timer);document.removeEventListener("keydown",key);overlay.classList.add("intro-leaving");setTimeout(()=>{overlay.hidden=true;overlay.classList.remove("intro-leaving");background.forEach(n=>n.inert=false);document.body.classList.remove("intro-active");introPlaying=false;if(previous&&previous!==document.body)previous.focus();else $("content").focus({preventScroll:true});},220);};
     $("skip-intro").onclick=finish;document.addEventListener("keydown",key);$("skip-intro").focus({preventScroll:true});timer=setTimeout(finish,3400);
   }
   function marketsFor(g) {
