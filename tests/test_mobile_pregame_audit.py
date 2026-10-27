@@ -69,7 +69,7 @@ class TestMobileAudit(unittest.TestCase):
             self.assertNotIn("rights_evidence_url",str(r))
 
     def test_audit_and_team_page_are_real_interactive_tabs(self):
-        html=(ROOT/"index.html").read_text(encoding="utf-8")
+        html=(ROOT/"research.html").read_text(encoding="utf-8")
         for marker in ('data-target="audit"','id="audit"','id="audit-metrics"',
                        'id="audit-results"','id="audit-day"','id="audit-market"',
                        'id="team-compare"','team-analytics.js','audit-dashboard.js'):

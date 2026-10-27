@@ -7,7 +7,7 @@ ROOT=Path(__file__).resolve().parents[1]
 
 class ApexWebTests(unittest.TestCase):
     def test_apex_model_tab_and_script(self):
-        html=(ROOT/"index.html").read_text(encoding="utf-8")
+        html=(ROOT/"research.html").read_text(encoding="utf-8")
         script=(ROOT/"apex-dashboard.js").read_text(encoding="utf-8")
         for item in ('data-target="apex-v21"','id="apex-v21"','id="apex-v21-terminal"',
                      '<script src="./apex-dashboard.js" defer></script>'):

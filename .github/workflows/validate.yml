@@ -7,6 +7,9 @@ on:
       - 'data/**'
       - 'scripts/**'
       - 'index.html'
+      - 'research.html'
+      - 'platform.js'
+      - 'platform.css'
       - 'research-dashboard.js'
       - 'game-details.js'
       - 'news.js'
@@ -28,6 +31,7 @@ jobs:
         run: python3 -m unittest discover -s tests -v
       - name: Validate JavaScript syntax
         run: |
+          node --check platform.js
           node --check research-dashboard.js
           node --check game-details.js
           node --check injuries.js

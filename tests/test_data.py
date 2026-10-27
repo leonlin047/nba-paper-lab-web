@@ -58,7 +58,7 @@ class DataTests(unittest.TestCase):
   self.assertFalse(coverage["taiwan_sportslottery_connected"])
   self.assertLessEqual(coverage["complete_three_market_events"],coverage["future_game_count"])
  def test_coverage_has_public_ui(self):
-  html=(ROOT/"index.html").read_text()
+  html=(ROOT/"research.html").read_text()
   js=(ROOT/"research-dashboard.js").read_text()
   self.assertIn('id="pl-market-coverage"',html)
   self.assertIn('id="pl-tw-odds"',html)
@@ -86,7 +86,7 @@ class DataTests(unittest.TestCase):
   self.assertEqual(d.get("redistribution_authorized"),False)
   self.assertIn(d.get("fetch_status"),("reachable","http_error","error","unknown"))
  def test_dashboard_assets(self):
-  html=(ROOT/"index.html").read_text()
+  html=(ROOT/"research.html").read_text()
   self.assertIn('id="research"',html)
   self.assertIn('research-dashboard.js',html)
   self.assertIn('game-details.js',html)
