@@ -1,0 +1,311 @@
+{
+  "as_of_taiwan": "2026-10-28",
+  "scope": "Targeted discovery, not a systematic or exhaustive review",
+  "indexed_candidates": 40,
+  "unique_candidate_ids": 40,
+  "records": [
+    {
+      "query_group": "rest",
+      "id": "pmid:35980109",
+      "title": "Associations of circadian change, travel distance, and their interaction with basketball performance: a retrospective analysis of 2014-2018 National Basketball Association data.",
+      "reading": "abstract_screen_only",
+      "decision": "background_or_future_candidate"
+    },
+    {
+      "query_group": "rest",
+      "id": "pmid:9381060",
+      "title": "Effect of travel and rest on performance of professional basketball players.",
+      "reading": "abstract_screen_only",
+      "decision": "background_or_future_candidate"
+    },
+    {
+      "query_group": "rest",
+      "id": "pmcid:PMC8636381",
+      "title": "Impacts of travel distance and travel direction on back-to-back games in the National Basketball Association.",
+      "reading": "selected_methods_or_results",
+      "decision": "used_with_limitations"
+    },
+    {
+      "query_group": "rest",
+      "id": "pmcid:PMC7732833",
+      "title": "Utilizing the National Basketball Association’s COVID-19 restart bubble to uncover the impact of travel and circadian disruption on athletic performance.",
+      "reading": "abstract_screen_only",
+      "decision": "background_or_future_candidate"
+    },
+    {
+      "query_group": "rest",
+      "id": "pmcid:PMC9245584",
+      "title": "Eastward Jet Lag is Associated with Impaired Performance and Game Outcome in the National Basketball Association.",
+      "reading": "selected_methods_or_results",
+      "decision": "used_with_limitations"
+    },
+    {
+      "query_group": "rest",
+      "id": "pmid:38689400",
+      "title": "Investigation of the effect of circadian rhythm on the performances of NBA teams.",
+      "reading": "abstract_screen_only",
+      "decision": "background_or_future_candidate"
+    },
+    {
+      "query_group": "rest",
+      "id": "pmcid:PMC13350567",
+      "title": "Home-Court Advantage and the Associations of Travel and Jet Lag with Team Performance in the Women’s National Basketball Association (WNBA).",
+      "reading": "abstract_screen_only",
+      "decision": "background_or_future_candidate"
+    },
+    {
+      "query_group": "availability",
+      "id": "arxiv:2608.19454",
+      "title": "Dummy RAPM: Representing Low-Minute Players in Regularized Adjusted Plus-Minus",
+      "reading": "abstract_screen_only",
+      "decision": "background_or_future_candidate"
+    },
+    {
+      "query_group": "availability",
+      "id": "arxiv:1707.01855",
+      "title": "LinNet: Probabilistic Lineup Evaluation Through Network Embedding",
+      "reading": "abstract_screen_only",
+      "decision": "background_or_future_candidate"
+    },
+    {
+      "query_group": "availability",
+      "id": "arxiv:2403.20214",
+      "title": "Hypergraph adjusted plus-minus",
+      "reading": "selected_methods_or_results",
+      "decision": "used_with_limitations"
+    },
+    {
+      "query_group": "availability",
+      "id": "arxiv:2406.09895",
+      "title": "Lasso Multinomial Performance Indicators for in-play Basketball Data",
+      "reading": "abstract_screen_only",
+      "decision": "background_or_future_candidate"
+    },
+    {
+      "query_group": "availability",
+      "id": "pmid:34010095",
+      "title": "Return to play, performance, and value of National Basketball Association players following Achilles tendon rupture.",
+      "reading": "abstract_screen_only",
+      "decision": "not_selected_for_nba_efficacy"
+    },
+    {
+      "query_group": "availability",
+      "id": "arxiv:2605.24056",
+      "title": "Possession-Level Player Impact in the Pre-Play-by-Play NBA Era: A Video-Reconstructed RAPM Database, 1984--1996",
+      "reading": "abstract_screen_only",
+      "decision": "background_or_future_candidate"
+    },
+    {
+      "query_group": "availability",
+      "id": "arxiv:2601.15000",
+      "title": "Lineup Regularized Adjusted Plus-Minus (L-RAPM): Basketball Lineup Ratings with Informed Priors",
+      "reading": "selected_methods_or_results",
+      "decision": "used_with_limitations"
+    },
+    {
+      "query_group": "scorecards",
+      "id": "arxiv:2210.05846",
+      "title": "FasterRisk: Fast and Accurate Interpretable Risk Scores",
+      "reading": "selected_methods_or_results",
+      "decision": "used_with_limitations"
+    },
+    {
+      "query_group": "scorecards",
+      "id": "pmcid:PMC10356069",
+      "title": "Optimized Risk Score to Predict Mortality in Patients With Cardiogenic Shock in the Cardiac Intensive Care Unit.",
+      "reading": "abstract_screen_only",
+      "decision": "not_selected_for_nba_efficacy"
+    },
+    {
+      "query_group": "scorecards",
+      "id": "arxiv:1911.12119",
+      "title": "Interactivity and Transparency in Medical Risk Assessment with Supersparse Linear Integer Models",
+      "reading": "abstract_screen_only",
+      "decision": "background_or_future_candidate"
+    },
+    {
+      "query_group": "scorecards",
+      "id": "arxiv:2311.13015",
+      "title": "Fast and Interpretable Mortality Risk Scores for Critical Care Patients",
+      "reading": "abstract_screen_only",
+      "decision": "not_selected_for_nba_efficacy"
+    },
+    {
+      "query_group": "scorecards",
+      "id": "arxiv:2604.04241",
+      "title": "Learning an Interpretable Risk Scoring System for Maximizing Decision Net Benefit",
+      "reading": "abstract_screen_only",
+      "decision": "background_or_future_candidate"
+    },
+    {
+      "query_group": "scorecards",
+      "id": "pmcid:PMC5822188",
+      "title": "Association of an Electroencephalography-Based Risk Score With Seizure Probability in Hospitalized Patients.",
+      "reading": "abstract_screen_only",
+      "decision": "not_selected_for_nba_efficacy"
+    },
+    {
+      "query_group": "scorecards",
+      "id": "arxiv:2304.05023",
+      "title": "Learning Optimal Fair Scoring Systems for Multi-Class Classification",
+      "reading": "abstract_screen_only",
+      "decision": "background_or_future_candidate"
+    },
+    {
+      "query_group": "markets",
+      "id": "arxiv:2604.17194",
+      "title": "Forecast Sports Outcomes under Efficient Market Hypothesis: Theoretical and Experimental Analysis of Odds-Only and Generalised Linear Models",
+      "reading": "selected_methods_or_results",
+      "decision": "used_with_limitations"
+    },
+    {
+      "query_group": "markets",
+      "id": "arxiv:2303.06021",
+      "title": "Machine learning for sports betting: should model selection be based on accuracy or calibration?",
+      "reading": "selected_methods_or_results",
+      "decision": "used_with_limitations"
+    },
+    {
+      "query_group": "markets",
+      "id": "arxiv:2306.01740",
+      "title": "Not feeling the buzz: Correction study of mispricing and inefficiency in online sportsbooks",
+      "reading": "selected_methods_or_results",
+      "decision": "used_with_limitations"
+    },
+    {
+      "query_group": "markets",
+      "id": "arxiv:2410.21484",
+      "title": "A Systematic Review of Machine Learning in Sports Betting: Techniques, Challenges, and Future Directions",
+      "reading": "abstract_screen_only",
+      "decision": "background_or_future_candidate"
+    },
+    {
+      "query_group": "markets",
+      "id": "arxiv:1710.02824",
+      "title": "Beating the bookies with their own numbers - and how the online sports betting market is rigged",
+      "reading": "abstract_screen_only",
+      "decision": "background_or_future_candidate"
+    },
+    {
+      "query_group": "markets",
+      "id": "arxiv:2609.06739",
+      "title": "The profit-bias identity in sports betting: bookmaker profit as the public’s prediction error",
+      "reading": "abstract_screen_only",
+      "decision": "background_or_future_candidate"
+    },
+    {
+      "query_group": "markets",
+      "id": "arxiv:2109.07581",
+      "title": "The Impact of COVID-19 on Sports Betting Markets",
+      "reading": "abstract_screen_only",
+      "decision": "background_or_future_candidate"
+    },
+    {
+      "query_group": "pregame",
+      "id": "pmcid:PMC9251030",
+      "title": "Integration of model-based recursive partitioning with bias reduction estimation: a case study assessing the impact of Oliver’s four factors on the probability of winning a basketball game.",
+      "reading": "selected_methods_or_results",
+      "decision": "used_with_limitations"
+    },
+    {
+      "query_group": "pregame",
+      "id": "pmcid:PMC11265715",
+      "title": "Integration of machine learning XGBoost and SHAP models for NBA game outcome prediction and quantitative analysis methodology.",
+      "reading": "selected_methods_or_results",
+      "decision": "used_with_limitations"
+    },
+    {
+      "query_group": "pregame",
+      "id": "arxiv:2305.13032",
+      "title": "Decomposing Basketball Team Efficiency Using the Four Factors and Shapley Values",
+      "reading": "selected_methods_or_results",
+      "decision": "used_with_limitations"
+    },
+    {
+      "query_group": "pregame",
+      "id": "pmcid:PMC6234313",
+      "title": "Investigating the game-related statistics and tactical profile in NCAA division I men’s basketball games.",
+      "reading": "abstract_screen_only",
+      "decision": "background_or_future_candidate"
+    },
+    {
+      "query_group": "pregame",
+      "id": "pmcid:PMC13270735",
+      "title": "Four factors as key performance indicators of game outcomes in the Women’s U19 World Cup and Women’s EuroBasket 2025.",
+      "reading": "abstract_screen_only",
+      "decision": "background_or_future_candidate"
+    },
+    {
+      "query_group": "pregame",
+      "id": "pmcid:PMC12012039",
+      "title": "Explaining basketball game performance with SHAP: insights from Chinese Basketball Association.",
+      "reading": "abstract_screen_only",
+      "decision": "background_or_future_candidate"
+    },
+    {
+      "query_group": "pregame",
+      "id": "pmcid:PMC9390892",
+      "title": "Game statistics that discriminate winning and losing at the NBA level of basketball competition.",
+      "reading": "abstract_screen_only",
+      "decision": "background_or_future_candidate"
+    },
+    {
+      "query_group": "hot",
+      "id": "pmcid:PMC8789340",
+      "title": "The hot hand in the wild.",
+      "reading": "abstract_screen_only",
+      "decision": "background_or_future_candidate"
+    },
+    {
+      "query_group": "hot",
+      "id": "arxiv:2303.17863",
+      "title": "Can the hot hand phenomenon be modelled? A Bayesian hidden Markov approach",
+      "reading": "abstract_screen_only",
+      "decision": "background_or_future_candidate"
+    },
+    {
+      "query_group": "hot",
+      "id": "arxiv:1810.03383",
+      "title": "Illusion of persistence in NBA 1995-2018 regular season data",
+      "reading": "selected_methods_or_results",
+      "decision": "used_with_limitations"
+    },
+    {
+      "query_group": "hot",
+      "id": "pmid:26272665",
+      "title": "The hot hand revisited: A nonstationarity argument.",
+      "reading": "abstract_screen_only",
+      "decision": "background_or_future_candidate"
+    },
+    {
+      "query_group": "hot",
+      "id": "arxiv:1912.07442",
+      "title": "Time-based analysis of the NBA hot hand fallacy",
+      "reading": "abstract_screen_only",
+      "decision": "background_or_future_candidate"
+    }
+  ],
+  "additional_sources": [
+    {
+      "id": "jmlr:20(150):1-75",
+      "url": "https://jmlr.org/papers/volume20/18-615/18-615.pdf",
+      "reading": "first_12_pages",
+      "note": "Use URL as canonical citation; no DOI was verified."
+    },
+    {
+      "id": "doi:10.1080/07420528.2024.2391649",
+      "reading": "correction_text",
+      "note": "Standardization units clarified; same underlying 2022 study."
+    },
+    {
+      "id": "pmid:40481637",
+      "reading": "abstract_only",
+      "note": "Publisher response had no substantive article text; football finding is not direct NBA effect evidence."
+    }
+  ],
+  "failed_route": {
+    "query_group": "validation",
+    "result": "index tool error; no records counted; chronology checked in original methods and complementary searches"
+  },
+  "copyright": "Titles, identifiers and original screening notes only; no redistributed paper bodies."
+}

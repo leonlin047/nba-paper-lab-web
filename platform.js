@@ -5,6 +5,17 @@
   const numeric = v => v !== null && v !== undefined && v !== "" && Number.isFinite(Number(v)) ? Number(v) : null;
   const day = v => { const n = new Date(v).getTime(); return Number.isFinite(n) ? new Date(n + 8 * 3600000).toISOString().slice(0,10) : ""; };
   const validBefore = (generated, tip) => Number.isFinite(Date.parse(generated)) && Date.parse(generated) < Date.parse(tip);
+  function scheduleDate(games, now=Date.now(), requested="") {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(requested) && day(`${requested}T12:00:00+08:00`)===requested) return requested;
+    const current=day(now),pending=games.filter(g=>g.status==="in"||(g.status==="pre"&&Date.parse(g.date)>now));
+    if(pending.some(g=>day(g.date)===current))return current;
+    const next=pending.map(g=>day(g.date)).filter(d=>d>=current).sort()[0];return next||current;
+  }
+  function pregameReport(game, report, model="elo", now=Date.now()) {
+    if(model!=="elo"||game.status!=="pre"||Date.parse(game.date)<=now||!report||!validBefore(report.generated_at_utc,game.date))return null;
+    if(String(report.event_id)!==String(game.id)||canonical(report.home)!==canonical(game.home)||canonical(report.away)!==canonical(game.away))return null;
+    return typeof report.report_zh==="string"&&report.report_zh.trim()?report.report_zh.trim():null;
+  }
   function tally(rows, field) {
     const eligible = rows.filter(r => r.status === "eligible" && typeof r[field]?.hit === "boolean");
     return {n:eligible.length, correct:eligible.filter(r => r[field].hit).length};
@@ -29,7 +40,7 @@
       return {...p,n:recent.length,last:recent[0].date,MIN:average("MIN"),PTS:average("PTS"),REB:average("REB"),AST:average("AST")};
     }).sort((a,b) => (b.PTS ?? -1)-(a.PTS ?? -1));
   }
-  if (typeof module !== "undefined") module.exports = {canonical,numeric,day,validBefore,tally,playerForms};
+  if (typeof module !== "undefined") module.exports = {canonical,numeric,day,validBefore,tally,playerForms,scheduleDate,pregameReport};
   if (typeof document === "undefined") return;
   const $ = id => document.getElementById(id);
   function el(tag, cls, text) { const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=String(text);return n; }
@@ -42,6 +53,7 @@
   const signed = v => numeric(v) === null ? "—" : `${Number(v)>0?"+":""}${Number(v)}`;
   const stamp = v => Number.isFinite(Date.parse(v)) ? new Intl.DateTimeFormat("zh-TW",{timeZone:"Asia/Taipei",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hour12:false}).format(new Date(v)) : "時間未提供";
   const today = day(Date.now());
+  const tomorrow = day(Date.now()+86400000);
   const state = {date:today,model:"elo",dataset:"teams",page:"games",files:{},failed:[],players:[]};
   function empty(target,title,body) {const n=el("div","empty");n.append(el("strong","",title),el("div","",body));target.append(n);}
   function symbol(t) {return el("span","team-symbol",canonical(t));}
@@ -59,14 +71,27 @@
     for(const date of dates) {
       const d=new Date(`${date}T12:00:00+08:00`),b=el("button");b.type="button";b.dataset.date=date;b.setAttribute("aria-pressed",String(date===state.date));
       const weekday=new Intl.DateTimeFormat("zh-TW",{timeZone:"Asia/Taipei",weekday:"short"}).format(d);
-      b.append(el("span","",date===today?"今天":weekday),el("strong","",date.slice(8)),el("span","",`${Number(date.slice(5,7))} 月`));
-      b.addEventListener("click",()=>{state.date=date;renderDates();renderGames();});target.append(b);
+      b.append(el("span","",date===today?"今天":date===tomorrow?"明天":weekday),el("strong","",date.slice(8)),el("span","",`${Number(date.slice(5,7))} 月`));
+      b.addEventListener("click",()=>selectSchedule(date));target.append(b);
     }
     const active=target.querySelector('[aria-pressed="true"]');if(active)target.scrollLeft=Math.max(0,active.offsetLeft-target.offsetLeft-80);
   }
+  function selectSchedule(date) {state.date=date;const url=new URL(location.href);url.searchParams.set("date",date);url.hash="games";history.replaceState(null,"",url);setPage("games",false);renderDates();}
+  function playIntro(force=false) {
+    const overlay=$("brand-intro"),reduce=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if(reduce){$("replay-intro").textContent="減少動態：品牌開場已略過";$("replay-intro").disabled=true;return;}
+    try{if(!force&&sessionStorage.getItem("court-noir-intro-v1"))return;sessionStorage.setItem("court-noir-intro-v1","seen");}catch{/* Storage restrictions must not block the app. */}
+    const previous=document.activeElement,background=[document.querySelector(".topbar"),document.querySelector(".app-shell")];
+    let timer,finished=false;overlay.hidden=false;overlay.classList.remove("intro-leaving");background.forEach(n=>n.inert=true);document.body.classList.add("intro-active");
+    // Restart the decorative SVG when the user explicitly requests replay.
+    const crew=overlay.querySelector(".intro-crew");crew.replaceWith(crew.cloneNode(true));
+    const key=e=>{if(e.key==="Escape")finish();if(e.key==="Tab"){e.preventDefault();$("skip-intro").focus();}};
+    const finish=()=>{if(finished)return;finished=true;clearTimeout(timer);document.removeEventListener("keydown",key);overlay.classList.add("intro-leaving");background.forEach(n=>n.inert=false);document.body.classList.remove("intro-active");if(previous&&previous!==document.body)previous.focus();else $("content").focus({preventScroll:true});setTimeout(()=>{overlay.hidden=true;overlay.classList.remove("intro-leaving");},220);};
+    $("skip-intro").onclick=finish;document.addEventListener("keydown",key);$("skip-intro").focus({preventScroll:true});timer=setTimeout(finish,3400);
+  }
   function marketsFor(g) {
     if(state.model!=="elo" || g.status!=="pre" || Date.parse(g.date)<=Date.now())return null;
-    const r=state.files.reports?.reports?.find(r=>String(r.event_id)===String(g.id) && validBefore(r.generated_at_utc,g.date));
+    const r=state.files.reports?.reports?.find(r=>String(r.event_id)===String(g.id) && canonical(r.home)===canonical(g.home) && canonical(r.away)===canonical(g.away) && validBefore(r.generated_at_utc,g.date));
     const pred=state.files.research?.predictions?.find(p=>String(p.event_id)===String(g.id) && validBefore(state.files.research.updated_at_utc,g.date));
     return r||pred?{report:r,probability:numeric(pred?.home_win_probability) ?? numeric(r?.markets?.moneyline?.home_probability_experimental)}:null;
   }
@@ -85,6 +110,9 @@
     const target=$("game-list");target.replaceChildren();
     const games=(state.files.games?.games||[]).filter(g=>day(g.date)===state.date).sort((a,b)=>Date.parse(a.date)-Date.parse(b.date));
     $("game-count").textContent=`${games.length} 場比賽`;
+    $("schedule-title").textContent=state.date===tomorrow?"明日預測":state.date===today?"今日賽事":`${state.date.slice(5).replace("-"," / ")} 賽事預測`;
+    $("selected-date-context").textContent=`${state.date} · 台北時間 UTC+8 · ${games.length} 場${state.date===tomorrow?"，各場附中文賽前報告":""}`;
+    $("go-tomorrow").setAttribute("aria-pressed",String(state.date===tomorrow));
     $("model-context").textContent=state.model==="elo"?"Elo 勝率與比分推估供研究參考；讓分、大小分機率尚未完成盤口校準。已完賽場次不使用賽後預測回填。":state.model==="apex"?"APEX v2.1 已整合至私人研究流程，尚無獲准公開的真實賽前預測；目前不顯示候補模型的模擬數字。":"Elo × APEX 融合已完成研究實作，仍在累積有效賽前紀錄，尚未成為公開主模型。";
     if(!games.length)empty(target,"這一天沒有可用賽程","可切換其他日期；缺少資料不代表當天一定沒有比賽。");
     for(const g of games) {
@@ -101,6 +129,8 @@
       const cells=predictionCells(g);
       if(cells){const grid=el("div","market-grid");for(const [label,pick,p] of cells){const c=el("div","market-cell");c.append(el("span","",label),el("strong","",pick),el("em","",p));grid.append(c);}card.append(grid);}
       else card.append(el("div","model-unavailable",g.status==="post"?"賽事已結束 · 當時預測請至「預測成績」查核封存紀錄。":g.status==="in"?"比賽進行中 · 不新增賽前預測。":state.model==="elo"?"尚無符合時序的公開預測。":"此模型尚無可公開的賽前預測。"));
+      const report=marketsFor(g)?.report,brief=pregameReport(g,report,state.model);
+      if(brief){const n=el("section","game-brief"),head=el("div","brief-heading");head.append(el("h3","","中文賽前報告"),el("span","",`${[...brief].length} 字 · Elo`));n.append(head,el("p","",brief),el("div","brief-source",`產生 ${stamp(report.generated_at_utc)}（台北） · 以公開資料摘要，非已驗證投注績效`));card.append(n);}
       const bottom=el("div","card-bottom");bottom.append(el("span","",g.venue||"場館待提供"));const open=el("button","text-button","單場分析 ↗");open.addEventListener("click",()=>openGame(g));bottom.append(open);card.append(bottom);target.append(card);
     }
     const updated=state.files.games?.captured_at;$("game-source").textContent=`來源：ESPN 公開賽事資料 · 擷取 ${stamp(updated)}（台北）${Date.now()-Date.parse(updated)>86400000?" · 資料超過 24 小時，請核對最新狀態":""}`;
@@ -161,6 +191,7 @@
     const content=[title,el("p","subtitle",`${stamp(g.date)}（台北） · ${g.venue||"場館未提供"}`)],cells=predictionCells(g),report=marketsFor(g)?.report;
     if(cells){const grid=el("div","metric-grid");for(const [label,pick,p]of cells)grid.append(metricCard(label,pick,`研究機率 ${p}`));content.push(grid,el("p","dialog-subtitle",`Elo 研究輸出 · 產生 ${stamp(report?.generated_at_utc||state.files.research?.updated_at_utc)} · 盤口 ${report?.analyst?.market_observation?.provider||"來源未提供"} / ${stamp(report?.analyst?.market_observation?.captured_at_utc)}`));}
     else content.push(el("p","context-note",g.status==="post"?"已完賽。不使用賽後重算填入當時預測；請在預測成績頁查核已封存場次。":"此模型目前沒有符合時序的公開賽前預測。"));
+    const brief=pregameReport(g,report,state.model);if(brief){const n=el("section","panel match-report");n.append(el("h3","",`中文賽前報告 · ${[...brief].length} 字`),el("p","",brief));content.push(n);}
     const analysis=el("div","game-analysis");for(const t of [g.away,g.home]){const n=el("div"),form=report?.analyst?.form?.[canonical(t)===canonical(g.home)?"home":"away"],recent=recentTeam(t);n.append(el("h3","",fullTeam(t)));if(form?.n)n.append(el("p","",`賽前近況樣本 ${form.n} 場`),el("p","",`場均得分 ${fmt(form.avg_scored)} / 失分 ${fmt(form.avg_allowed)}`),el("p","",`近 5 場 ${form.last5_wins ?? "—"} 勝 · 休息 ${fmt(form.rest_days)} 天`));else n.append(el("p","",`目前資料中 ${recent.length} 場例行賽近況`));analysis.append(n);}content.push(el("h3","","球隊近況"),analysis,el("h3","","相關傷停"));
     const injuries=(state.files.injuries?.injuries||[]).filter(i=>[canonical(g.home),canonical(g.away)].includes(canonical(i.team)));if(injuries.length)for(const i of injuries)content.push(injuryCard(i));else content.push(el("p","dialog-subtitle","目前未收錄相關傷停公告，不代表全員健康。"));
     const detail=state.files.games?.details?.find(d=>String(d.event_id)===String(g.id));if(detail?.boxscore?.length){content.push(el("h3","","單場球員數據"));for(const b of detail.boxscore){const panel=el("div","panel");panel.append(el("h3","",fullTeam(b.team)));for(const p of b.players||[])panel.append(el("div","",`${player(p.name)} · ${p.stats?.MIN ?? "—"} 分鐘 / ${p.stats?.PTS ?? "—"} 分 / ${p.stats?.REB ?? "—"} 籃板 / ${p.stats?.AST ?? "—"} 助攻`));content.push(panel);}}
@@ -179,6 +210,7 @@
     const names=["games","research","reports","pregame-audit","injuries","integration-status"];
     const outcomes=await Promise.allSettled(names.map(async name=>{const r=await fetch(`./data/${name}.json`,{cache:"no-store"});if(!r.ok)throw new Error(String(r.status));return r.json();}));
     outcomes.forEach((r,i)=>{if(r.status==="fulfilled")state.files[names[i]]=r.value;else state.failed.push(names[i]);});
+    state.date=scheduleDate(state.files.games?.games||[],Date.now(),new URLSearchParams(location.search).get("date")||"");
     state.players=playerForms(state.files.games?.games||[],state.files.games?.details||[]);
     $("load-status").textContent=state.failed.length?`部分資料暫時無法讀取：${state.failed.join("、")}。可重新整理重試。`:"";$("load-status").classList.toggle("error",!!state.failed.length);
     renderDates();setupResults();setPage(location.hash.slice(1),false);
@@ -189,7 +221,10 @@
   document.querySelectorAll("[data-dataset]").forEach(b=>b.addEventListener("click",()=>{state.dataset=b.dataset.dataset;document.querySelectorAll("[data-dataset]").forEach(n=>n.setAttribute("aria-pressed",String(n===b)));renderData();}));
   for(const id of ["result-day","result-market","result-model"])$(id).addEventListener("change",renderResults);
   $("data-search").addEventListener("input",renderData);$("refresh").addEventListener("click",()=>location.reload());$("dialog-close").addEventListener("click",()=>$("game-dialog").close());
+  $("go-today").addEventListener("click",()=>selectSchedule(today));$("go-tomorrow").addEventListener("click",()=>selectSchedule(tomorrow));
+  $("replay-intro").addEventListener("click",()=>playIntro(true));
   $("game-dialog").addEventListener("click",e=>{if(e.target===$("game-dialog")){const r=e.target.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)e.target.close();}});
   window.addEventListener("hashchange",()=>setPage(location.hash.slice(1),false));
+  playIntro();
   init().catch(()=>{$("load-status").textContent="資料載入失敗，請重新整理；未顯示替代預測。";$("load-status").classList.add("error");});
 })();
