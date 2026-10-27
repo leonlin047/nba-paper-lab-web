@@ -59,6 +59,8 @@ const future={id:'next',home:'NY',away:'DET',status:'pre',date:'2026-10-27T23:30
 const report={event_id:'next',home:'NYK',away:'DET',generated_at_utc:'2026-10-27T12:00Z',report_zh:'獨贏、讓分、大小分的中文分析。'};
 assert.equal(pregameReport(future,report,'elo',now),report.report_zh);
 assert.equal(pregameReport(future,report,'apex',now),null);
+assert.equal(pregameReport(future,report,'factor',now),null);
+assert.equal(pregameReport(future,{...report,factor_forecast:true},'factor',now),report.report_zh);
 assert.equal(pregameReport({...future,status:'post'},report,'elo',now),null);
 assert.equal(pregameReport(future,{...report,generated_at_utc:future.date},'elo',now),null);
 assert.equal(pregameReport(future,{...report,home:'BOS'},'elo',now),null);
@@ -79,11 +81,15 @@ console.log('chronology and sample integrity passed');
         for path in ['assets/court-noir-mark.svg','assets/court-noir-wordmark.svg','assets/noir-entrance.svg']:
             ET.parse(ROOT/path)
         css=(ROOT/'platform.css').read_text()
-        for color in re.findall(r'#[0-9a-fA-F]+',css):
+        for color in re.findall(r'#[0-9a-fA-F]+\b(?![\w-])',css):
             self.assertIn(len(color)-1,(3,4,6,8),color)
         self.assertIn('prefers-reduced-motion:reduce',css)
         js=(ROOT/'platform.js').read_text()
-        self.assertIn('sessionStorage',js)
+        self.assertNotIn('sessionStorage',js)
+        for control in ['enter-platform','watch-intro','header-replay']:
+            self.assertIsNotNone(soup.find(id=control))
+        self.assertTrue((ROOT/'assets/noir-crew-cinematic-v2.webp').is_file())
+        self.assertNotIn('.brand-intro{display:none!important}',css)
         self.assertIn('e.key==="Escape"',js)
         self.assertIn('game-brief',js)
         self.assertIn('pregameReport(g,report,state.model)',js)
