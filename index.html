@@ -3,17 +3,23 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#F8F9FC">
-  <meta name="description" content="Paper Lab NBA 賽事分析平台。查看賽程、勝負與讓分大小分研究、封存預測成績、球隊及球員資料。">
-  <title>Paper Lab｜NBA 賽事分析平台</title>
-  <link rel="stylesheet" href="./platform.css?v=20261027-platform2">
+  <meta name="theme-color" content="#F4F1EB">
+  <meta name="description" content="墨場 COURT NOIR NBA 賽事研究平台。查看賽程、勝負與讓分大小分研究、封存預測成績、球隊及球員資料。">
+  <link rel="icon" type="image/svg+xml" href="./assets/court-noir-mark.svg">
+  <title>墨場 COURT NOIR｜NBA 賽事研究平台</title>
+  <link rel="stylesheet" href="./platform.css?v=20261027-noir1">
   <script src="./localization.js" defer></script>
-  <script src="./platform.js?v=20261027-platform1" defer></script>
+  <script src="./platform.js?v=20261027-noir1" defer></script>
 </head>
 <body>
+<section id="brand-intro" class="brand-intro" role="dialog" aria-modal="true" aria-labelledby="intro-title" hidden>
+  <div class="intro-top"><span>COURT NOIR · OPENING MOTION</span><button id="skip-intro" type="button">跳過開場 →</button></div>
+  <div class="intro-content"><img class="intro-emblem" src="./assets/court-noir-mark.svg" alt="" width="42" height="42"><p class="intro-eyebrow">BASKETBALL · BOOKS · COMPOSURE</p><h2 id="intro-title">墨場</h2><p class="intro-wordmark">COURT NOIR</p><img class="intro-crew" src="./assets/noir-entrance.svg" alt="五位黑西裝英式平頂帽人物，拿著籃球與書本，並肩站在球場上" width="960" height="420"><p class="intro-motto">以球入場，以書立身。</p><div class="intro-rule" aria-hidden="true"></div></div>
+  <div class="intro-bottom"><span>EST. 2026</span><span>場上看局，場下有據。</span></div>
+</section>
 <a class="skip" href="#content">跳至主要內容</a>
 <header class="topbar">
-  <a class="brand" href="#games" aria-label="Paper Lab 首頁"><span class="brand-mark">P<span>∕</span></span><span>PAPER LAB<small>籃球分析 · 每場有據</small></span></a>
+  <a class="brand" href="#games" aria-label="墨場 COURT NOIR 首頁"><img class="brand-symbol" src="./assets/court-noir-mark.svg" alt="" width="40" height="40"><span class="brand-name">墨場<small>COURT NOIR</small></span></a>
   <div class="header-right"><span class="beta-label">內測版</span><button class="icon-button" id="refresh" aria-label="重新載入最新資料"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5M6 7a7 7 0 0 1 12-1l2 6M4 12l2 6a7 7 0 0 0 12-1"/></svg></button></div>
 </header>
 <div class="app-shell">
@@ -29,8 +35,9 @@
   <div id="load-status" class="load-status" role="status">正在讀取最新賽事資料…</div>
   <section id="page-games" class="page">
     <div class="page-heading"><div><p class="eyebrow">NBA · GAME CENTER</p><h1>賽事中心</h1><p class="subtitle">賽程、模型觀點與場上表現，一起看清楚。</p></div><span id="today-label" class="date-label"></span></div>
-    <section class="hero" aria-labelledby="hero-title"><div class="hero-copy"><span class="hero-kicker">PAPER LAB ANALYTICS</span><h2 id="hero-title">每一場，<br>都有依據。</h2><p>從賽前判斷到賽後核對，<br>讓資料說明每一次選擇。</p><button class="hero-cta" data-goto="results">查看預測紀錄 <span>↗</span></button></div><div class="court" aria-hidden="true"><svg viewBox="0 0 340 300"><g fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 20h300v520H20zM20 100h58a92 92 0 0 0 184 0h58M122 20v110h96V20M122 130a48 48 0 0 0 96 0M154 48h32m-16 0v12"/><circle cx="170" cy="72" r="12"/><path d="M170 20v260" stroke-dasharray="5 7"/></g><g fill="currentColor"><circle cx="95" cy="176" r="5"/><circle cx="249" cy="160" r="4"/><circle cx="171" cy="105" r="6"/><circle cx="202" cy="207" r="4"/><circle cx="67" cy="81" r="3"/></g></svg><span class="court-caption">THE GAME. THE DATA.</span></div></section>
-    <div class="section-heading"><h2>比賽日程</h2><span class="quiet">台北時間 UTC+8</span></div>
+    <section class="hero" aria-labelledby="hero-title"><div class="hero-copy"><span class="hero-kicker">COURT NOIR · BASKETBALL INTELLIGENCE</span><h2 id="hero-title">看懂局勢，<br>不失風度。</h2><p>獨贏、讓分、大小分，<br>每個觀點，都有資料落點。</p><button class="hero-cta" data-goto="results">查看預測紀錄 <span>↗</span></button></div><div class="court" aria-hidden="true"><svg viewBox="0 0 340 300"><g fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 20h300v520H20zM20 100h58a92 92 0 0 0 184 0h58M122 20v110h96V20M122 130a48 48 0 0 0 96 0M154 48h32m-16 0v12"/><circle cx="170" cy="72" r="12"/><path d="M170 20v260" stroke-dasharray="5 7"/></g><g fill="currentColor"><circle cx="95" cy="176" r="5"/><circle cx="249" cy="160" r="4"/><circle cx="171" cy="105" r="6"/><circle cx="202" cy="207" r="4"/><circle cx="67" cy="81" r="3"/></g></svg><span class="court-caption">THE GAME. THE DATA.</span></div></section>
+    <div class="schedule-heading"><div><p class="eyebrow">PREGAME BRIEFING</p><h2 id="schedule-title">賽前預測</h2></div><div class="schedule-actions"><button id="go-today" class="text-button">今日賽果</button><button id="go-tomorrow" class="tomorrow-button">明日預測 ↗</button></div></div>
+    <p id="selected-date-context" class="context-note"></p>
     <div id="schedule-dates" class="date-strip" aria-label="選擇比賽日期"></div>
     <div class="filter-bar"><div id="forecast-models" class="segmented" aria-label="預測模型"><button data-model="elo" aria-pressed="true">Elo</button><button data-model="apex" aria-pressed="false">APEX</button><button data-model="ensemble" aria-pressed="false">Elo × APEX</button></div><span id="game-count" class="quiet"></span></div>
     <p class="context-note" id="model-context">Elo 勝率與比分推估供研究參考；讓分、大小分機率尚未完成盤口校準。</p>
@@ -52,14 +59,16 @@
     <p class="context-note" id="data-context"></p><div id="data-list" aria-live="polite"></div><div class="source-line" id="data-source"></div>
   </section>
   <section id="page-platform" class="page" hidden>
-    <div class="page-heading"><div><p class="eyebrow">ABOUT PAPER LAB</p><h1>用紀錄，建立信任。</h1><p class="subtitle">一個把預測、資料與驗證放在同一條脈絡的籃球分析平台。</p></div></div>
+    <div class="page-heading"><div><p class="eyebrow">ABOUT COURT NOIR</p><h1>用紀錄，建立信任。</h1><p class="subtitle">一個把預測、資料與驗證放在同一條脈絡的籃球分析平台。</p></div></div>
     <div class="platform-intro"><span class="small-label">目前階段</span><h2>持續驗證的內測平台</h2><p>目前以 Elo 提供公開研究預測，APEX 與融合方案累積真實賽前證據後再評估。模型更新必須經驗證與人工審核，不會因少量比賽的短期成績自動升級。</p></div>
     <div class="section-heading"><h2>模型與整合狀態</h2><span class="quiet">如實呈現進度</span></div><div id="model-status" class="model-grid"></div>
     <div class="section-heading"><h2>資料如何持續累積</h2></div><div id="integration-summary" class="panel"></div>
     <div class="section-heading"><h2>資料與使用說明</h2></div><div class="panel text-panel"><h3>來源與更新</h3><p>公開賽程、球員比賽數據及傷停由現有資料收集流程更新；每個頁面標示擷取時間。私人模型進度以人工確認的彙總快照呈現，超過 24 小時會提醒重新核對。</p><h3>內測與後續服務</h3><p>目前未開放訂閱或收款。資料來源的商業使用與再散布權利仍須確認，完成授權及長期模型驗證後才適合提供付費服務。</p><h3>研究定位</h3><p>球員能力、預估上場時間和勝率屬於推估，不能視為已知事實；傷停未列名也不等於健康。任何模型均不保證賽果或收益。</p><div class="text-links"><a href="./research.html">完整研究紀錄 ↗</a><a href="https://official.nba.com/nba-injury-report-2026-27-season/" target="_blank" rel="noopener noreferrer">NBA 官方傷情報告 ↗</a></div></div>
+    <div class="panel factor-research-entry"><span class="small-label">研究進行中</span><h3>把球場線索，變成可核對的加減分。</h3><p>計數因子評分卡正在設計：每條規則都要有來源、時間戳與獨立驗證，尚未影響現有預測。</p><a href="https://github.com/leonlin047/nba-paper-lab-web/blob/main/docs/COUNTABLE_FACTORS_RESEARCH_20261028.md">閱讀論文研究與評分卡草案 ↗</a></div>
+    <button id="replay-intro" class="text-button intro-replay" type="button">重播品牌開場 ↗</button>
     <div id="platform-asof" class="source-line"></div>
   </section>
-  <footer><a class="footer-brand" href="#games">PAPER LAB</a><p>理解比賽，始於可核對的資料。</p><span>獨立籃球研究平台 · 非 NBA 官方網站</span></footer>
+  <footer><a class="footer-brand" href="#games">墨場 COURT NOIR</a><p>場上看局，場下有據。</p><span>獨立籃球研究平台 · 非 NBA 官方網站</span></footer>
 </main>
 </div>
 <dialog id="game-dialog" aria-labelledby="dialog-title"><div class="dialog-top"><span class="eyebrow">GAME INSIGHT</span><button id="dialog-close" class="icon-button" aria-label="關閉分析">×</button></div><div id="dialog-content"></div></dialog>

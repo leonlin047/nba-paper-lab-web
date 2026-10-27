@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 420" role="img" aria-labelledby="title desc">
+<title id="title">以球入場，以書立身</title><desc id="desc">五位穿黑西裝與英式平頂帽的人物，在籃球場上並肩出現；有人捧著籃球，有人拿著書，中央人物同時帶著兩者。</desc>
+<style>.arrival{animation:arrive 1.15s cubic-bezier(.2,.7,.2,1) both}.a2{animation-delay:.13s}.a3{animation-delay:.26s}.a4{animation-delay:.39s}.a5{animation-delay:.52s}.court-line{stroke-dasharray:1300;stroke-dashoffset:1300;animation:draw 1.7s .15s ease forwards}.ball{transform-box:fill-box;transform-origin:center;animation:ball-settle 1.5s ease both}.book{transform-box:fill-box;transform-origin:center;animation:book-settle 1.2s ease both}@keyframes arrive{from{opacity:0;transform:translateY(35px)}to{opacity:1;transform:translateY(0)}}@keyframes draw{to{stroke-dashoffset:0}}@keyframes ball-settle{from{transform:rotate(-18deg)}to{transform:rotate(0)}}@keyframes book-settle{from{transform:rotate(5deg)}to{transform:rotate(0)}}@media(prefers-reduced-motion:reduce){*{animation:none!important}.court-line{stroke-dashoffset:0}}</style>
+<defs>
+ <g id="suit">
+  <ellipse cx="109" cy="280" rx="63" ry="7" fill="#cec6b8" opacity=".45"/>
+  <path d="m87 181-7 91 20 3 14-83 10 83 21-3-6-91z" fill="#252725"/>
+  <path d="m80 267-11 13q12 7 31 0v-12m25 0v12q19 7 33 0l-15-13" fill="#20211f"/>
+  <path d="M96 66v23h30V66" fill="#c9b69c"/>
+  <path d="M91 33q17-17 35-1l5 20q-1 22-20 24-18-3-20-24z" fill="#e0d0b9"/>
+  <path d="M89 35q0-19 21-20 24-1 28 22l-24-2-24 6z" fill="#272a27"/>
+  <path d="m86 37 48-5 11 6-34 7-25-2z" fill="#20221f"/>
+  <path d="m99 49 5-1m14 0 5 1m-13 5-2 7 6 1" fill="none" stroke="#8c7a64" stroke-width="1.2"/>
+  <path d="M93 80 73 90l-9 85 16 17 65-2 13-18-13-83-18-9-16 15z" fill="#242724"/>
+  <path d="m94 80 17 14 16-14-7 45h-19z" fill="#f0e8d9"/>
+  <path d="m108 92 6 1 3 12-6 18-5-17z" fill="#986d4a"/>
+  <path d="m91 80 20 48-22-19 8-7-11-8zm39 0-19 48 22-19-9-7 11-8z" fill="#383b35"/>
+  <path d="M111 130v58m15-42h14" fill="none" stroke="#54574d" stroke-width="1.4"/>
+  <circle cx="115" cy="153" r="1.4" fill="#b59c7b"/><circle cx="115" cy="174" r="1.4" fill="#b59c7b"/>
+  <path d="m73 91-12 8-17 57 20 9 20-44m59-30 15 11 15 54-18 9-17-44" fill="#2c302b"/>
+  <path d="m60 157 9 6 9-4-4-12-10-2zm95-1-7 8-10-4 3-12 12-2z" fill="#d1bda0"/>
+ </g>
+ <g id="book" class="book"><path d="m60 121 36-9 10 45-36 9z" fill="#ece0c9" stroke="#272a26" stroke-width="2"/><path d="m65 120 11 44m-8-37 22-5m-20 13 22-5m-21 13 20-5" fill="none" stroke="#aa9271" stroke-width="1.3"/><path d="m65 146 14 1 4 9-12 6-8-7z" fill="#cdb798"/></g>
+ <g id="ball" class="ball"><circle cx="158" cy="150" r="24" fill="#b57a4d" stroke="#282b26" stroke-width="2"/><path d="M134 150h48m-24-24v48m-18-41q28 17 0 34m36-34q-28 17 0 34" fill="none" stroke="#634a31" stroke-width="1.5"/><path d="m135 157 11 3 1 9-12 1-8-10z" fill="#cdb798"/></g>
+</defs>
+<g fill="none" stroke="#ba9c78" stroke-width="1.3" opacity=".55" class="court-line"><path d="M20 363h920M120 363l170-138h380l170 138M350 363l52-100h156l52 100M386 294a94 42 0 0 0 188 0"/><ellipse cx="480" cy="363" rx="105" ry="29"/></g>
+<g transform="translate(43 88) scale(.84)"><g class="arrival a1"><use href="#suit"/><use href="#book"/></g></g>
+<g transform="translate(203 53) scale(.96)"><g class="arrival a2"><use href="#suit"/><use href="#ball"/></g></g>
+<g transform="translate(370 28) scale(1.08)"><g class="arrival a3"><use href="#suit"/><use href="#book"/><use href="#ball"/></g></g>
+<g transform="translate(571 59) scale(.94)"><g class="arrival a4"><use href="#suit"/><use href="#book"/></g></g>
+<g transform="translate(727 94) scale(.82)"><g class="arrival a5"><use href="#suit"/><use href="#ball"/></g></g>
+</svg>

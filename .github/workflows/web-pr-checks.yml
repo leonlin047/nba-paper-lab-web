@@ -5,6 +5,8 @@ on:
       - "index.html"
       - "research.html"
       - "platform.css"
+      - "assets/**"
+      - "docs/**"
       - "data/integration-status.json"
       - "data/learning-status.json"
       - "*.js"

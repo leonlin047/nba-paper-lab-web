@@ -18,7 +18,7 @@ class PlatformTests(unittest.TestCase):
         self.assertEqual(len(ids), len(set(ids)))
         self.assertTrue(soup.select_one('a[href="./research.html"]'))
         self.assertIn('id="apex-v21-terminal"', (ROOT / 'research.html').read_text())
-        self.assertIn('返回 Paper Lab', (ROOT / 'research.html').read_text())
+        self.assertIn('返回 墨場', (ROOT / 'research.html').read_text())
 
     def test_asof_and_public_data_do_not_leak_private_state(self):
         d = json.loads((ROOT / 'data/integration-status.json').read_text())
@@ -35,7 +35,7 @@ class PlatformTests(unittest.TestCase):
         # Execute the actual helper functions used by the browser.
         script = r'''
 const assert = require('node:assert/strict');
-const {day,numeric,validBefore,tally,playerForms} = require('./platform.js');
+const {day,numeric,validBefore,tally,playerForms,scheduleDate,pregameReport} = require('./platform.js');
 assert.equal(day('2026-10-26T23:30Z'), '2026-10-27');
 assert.equal(numeric(null), null); assert.equal(numeric(''), null); assert.equal(numeric(0), 0);
 assert.equal(validBefore('2026-10-27T12:00Z','2026-10-27T12:00Z'),false);
@@ -47,10 +47,54 @@ const players = [{name:'A',stats:{MIN:'12:30',PTS:'0',REB:null,AST:'2'}},{name:'
 const d = {event_id:'a',boxscore:[{team:'NYK',players}]};
 const forms = playerForms(games,[d,d,{...d,event_id:'preseason'},{...d,event_id:'future'}],Date.parse('2026-10-27T00:00Z'));
 assert.equal(forms.length,1);assert.equal(forms[0].n,1);assert.equal(forms[0].MIN,12.5);assert.equal(forms[0].PTS,0);assert.equal(forms[0].REB,null);assert.equal(forms[0].team,'NY');
+const now=Date.parse('2026-10-27T13:00Z');
+const schedule=[{id:'past',date:'2026-10-27T00:00Z',status:'post'},{id:'next',date:'2026-10-27T23:30Z',status:'pre'}];
+assert.equal(scheduleDate(schedule,now),'2026-10-28');
+assert.equal(scheduleDate([...schedule,{id:'live',date:'2026-10-27T12:00Z',status:'in'}],now),'2026-10-27');
+assert.equal(scheduleDate(schedule,now,'2026-10-27'),'2026-10-27');
+assert.equal(scheduleDate(schedule,now,'bad'),'2026-10-28');
+assert.equal(scheduleDate(schedule,now,'2026-02-30'),'2026-10-28');
+assert.equal(scheduleDate([],now),'2026-10-27');
+const future={id:'next',home:'NY',away:'DET',status:'pre',date:'2026-10-27T23:30Z'};
+const report={event_id:'next',home:'NYK',away:'DET',generated_at_utc:'2026-10-27T12:00Z',report_zh:'獨贏、讓分、大小分的中文分析。'};
+assert.equal(pregameReport(future,report,'elo',now),report.report_zh);
+assert.equal(pregameReport(future,report,'apex',now),null);
+assert.equal(pregameReport({...future,status:'post'},report,'elo',now),null);
+assert.equal(pregameReport(future,{...report,generated_at_utc:future.date},'elo',now),null);
+assert.equal(pregameReport(future,{...report,home:'BOS'},'elo',now),null);
+assert.equal(pregameReport(future,{...report,event_id:'other'},'elo',now),null);
 console.log('chronology and sample integrity passed');
 '''
         result = subprocess.run(['node', '-e', script], cwd=ROOT, capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_motion_is_optional_and_local_assets_are_valid(self):
+        import re
+        import xml.etree.ElementTree as ET
+        soup=BeautifulSoup((ROOT/'index.html').read_text(),'html.parser')
+        self.assertTrue(soup.find(id='brand-intro').has_attr('hidden'))
+        self.assertIsNotNone(soup.find(id='skip-intro'))
+        self.assertIsNotNone(soup.find(id='replay-intro'))
+        self.assertIsNotNone(soup.find(id='go-tomorrow'))
+        for path in ['assets/court-noir-mark.svg','assets/court-noir-wordmark.svg','assets/noir-entrance.svg']:
+            ET.parse(ROOT/path)
+        css=(ROOT/'platform.css').read_text()
+        for color in re.findall(r'#[0-9a-fA-F]+',css):
+            self.assertIn(len(color)-1,(3,4,6,8),color)
+        self.assertIn('prefers-reduced-motion:reduce',css)
+        js=(ROOT/'platform.js').read_text()
+        self.assertIn('sessionStorage',js)
+        self.assertIn('e.key==="Escape"',js)
+        self.assertIn('game-brief',js)
+        self.assertIn('pregameReport(g,report,state.model)',js)
+
+    def test_research_screening_is_traceable_without_paper_bodies(self):
+        d=json.loads((ROOT/'docs/factor-literature-screening.json').read_text())
+        self.assertEqual(d['indexed_candidates'],40)
+        self.assertEqual(len(d['records']),d['indexed_candidates'])
+        self.assertEqual(len({r['id'] for r in d['records']}),d['unique_candidate_ids'])
+        self.assertTrue(all(r['reading'] in ('abstract_screen_only','selected_methods_or_results') for r in d['records']))
+        self.assertTrue(all('abstract' not in r and 'body' not in r for r in d['records']))
 
 
 if __name__ == '__main__':
