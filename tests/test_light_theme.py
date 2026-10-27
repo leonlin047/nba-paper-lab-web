@@ -9,7 +9,7 @@ ROOT=Path(__file__).resolve().parents[1]
 
 class MobileBrandTests(unittest.TestCase):
     def test_bright_cobalt_theme_and_meta(self):
-        html=(ROOT/"index.html").read_text(encoding="utf-8")
+        html=(ROOT/"research.html").read_text(encoding="utf-8")
         css=(ROOT/"theme-4456fe.css").read_text(encoding="utf-8")
         self.assertIn('<meta name="theme-color" content="#F8F9FC">',html)
         self.assertIn('href="./theme-4456fe.css?v=20261027"',html)
@@ -24,7 +24,7 @@ class MobileBrandTests(unittest.TestCase):
         self.assertNotIn("background:#0b172a",css)
 
     def test_no_functionality_lost(self):
-        html=(ROOT/"index.html").read_text(encoding="utf-8")
+        html=(ROOT/"research.html").read_text(encoding="utf-8")
         for pane in ("games","teams","injuries","models","apex-v21",
                      "audit","quality","research","news"):
             self.assertIn('data-target="'+pane+'"',html)
@@ -41,7 +41,7 @@ class MobileBrandTests(unittest.TestCase):
             self.assertEqual(check.returncode,0,script+": "+check.stderr)
 
     def test_all_data_stays_external_and_unchanged(self):
-        html=(ROOT/"index.html").read_text(encoding="utf-8")
+        html=(ROOT/"research.html").read_text(encoding="utf-8")
         css=(ROOT/"theme-4456fe.css").read_text(encoding="utf-8")
         # Theme should not hardcode odds, injuries, forecasts or hit rates.
         for key in ("api_key","access_token","authorization: bearer",

@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "as_of_utc": "2026-10-27T14:20:39.310133+00:00",
+  "update_method": "manual_sanitized_snapshot",
+  "private_report_url": "https://github.com/leonlin047/nba-paper-lab/actions/runs/40520238992",
+  "private_report_expires": "2026-11-03",
+  "models": {
+    "elo": {
+      "status": "active_research",
+      "frozen": 45,
+      "labeled": 9
+    },
+    "apex": {
+      "status": "insufficient_data",
+      "evaluated": 0,
+      "minimum": 100
+    },
+    "ensemble": {
+      "status": "shadow_candidate",
+      "public_forecasts": 0,
+      "automatic_promotion": false
+    },
+    "online": {
+      "status": "insufficient_data",
+      "trained": 9,
+      "minimum": 100,
+      "old_pairs_retrained": 0,
+      "public_forecasts": 0
+    }
+  },
+  "factors": {
+    "player_rows": 1442,
+    "injury_rows": 53,
+    "form_groups": 412,
+    "training_integration": "sidecar_only_pending_schema_and_rights_review",
+    "commercial_rights": "not_cleared"
+  },
+  "collection": {
+    "archived_final_games": 52,
+    "incremental_training": true,
+    "unchanged_evaluation_cache": true,
+    "paid_llm_calls": false,
+    "gpu_required": false,
+    "new_paid_services": false
+  },
+  "notes": [
+    "Private raw records and credentials are not published.",
+    "Public player views use existing public games.json, not the private sidecar.",
+    "Source factors are descriptive; not yet added to forecast weights.",
+    "No automatic continuous synchronization of private aggregates."
+  ]
+}

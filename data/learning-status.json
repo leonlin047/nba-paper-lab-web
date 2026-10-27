@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "source": "Private NBA Paper Lab research-snapshots aggregate (manually checked and sanitized)",
-  "as_of_utc": "2026-10-26T07:17:24.470930+00:00",
-  "frozen_pregame_games": 38,
-  "labeled_pregame_games": 0,
-  "archived_final_games": 43,
+  "as_of_utc": "2026-10-27T14:20:42.579633+00:00",
+  "frozen_pregame_games": 45,
+  "labeled_pregame_games": 9,
+  "archived_final_games": 52,
   "incumbent": "elo",
   "learning_workflow": "success",
   "models": {
@@ -19,6 +19,6 @@
   "status_snapshot_only": true,
   "public_update_frequency": "manual sanitized snapshot only; not synchronized continuously",
   "private_report_url": "https://github.com/leonlin047/nba-paper-lab/blob/research-snapshots/learning_loop.json",
-  "private_workflow_url": "https://github.com/leonlin047/nba-paper-lab/actions/runs/40284760675",
-  "caution": "38 immutable prior-to-tipoff Elo predictions, ZERO yet linked to later observed final outcomes. No independently established model improvement."
+  "private_workflow_url": "https://github.com/leonlin047/nba-paper-lab/actions/runs/40520238992",
+  "caution": "45 immutable pregame Elo captures; 9 linked outcomes. Insufficient prospective evidence to establish candidate improvement."
 }
