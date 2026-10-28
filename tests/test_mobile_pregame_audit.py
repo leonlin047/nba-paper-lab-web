@@ -1,4 +1,4 @@
-"""Protect the source-backed, two-date NBA pregame audit against leakage.
+"""Protect the source-backed, dated NBA pregame audit against leakage.
 
 Rows were created from GitHub snapshots saved before tipoff, not inferred
 retrospectively by the report generator.
@@ -21,11 +21,11 @@ class TestMobileAudit(unittest.TestCase):
     def test_observed_outcomes_and_strict_60min_freeze(self):
         a=self.audit
         self.assertEqual(a["schema_version"],1)
-        self.assertEqual(a["audited_games"],20)
-        self.assertEqual(a["eligible_games"],19)
+        self.assertEqual(a["audited_games"],24)
+        self.assertEqual(a["eligible_games"],23)
         self.assertEqual(a["excluded_games"],1)
         for r in a["rows"]:
-            self.assertTrue(r["date_taiwan"] in ("2026-10-24","2026-10-25"))
+            self.assertTrue(r["date_taiwan"] in ("2026-10-24","2026-10-25","2026-10-28"))
             if r["status"]=="eligible":
                 tip=datetime.fromisoformat(r["tipoff_utc"].replace("Z","+00:00"))
                 freeze=datetime.fromisoformat(r["freeze_utc"].replace("Z","+00:00"))
@@ -37,6 +37,15 @@ class TestMobileAudit(unittest.TestCase):
                 self.assertIsNotNone(r["total"])
             else:
                 self.assertIsNone(r.get("moneyline"))
+
+    def test_today_uses_published_pregame_evidence_not_postgame_recompute(self):
+        rows=[r for r in self.audit['rows']if r['date_taiwan']=='2026-10-28']
+        self.assertEqual(len(rows),4)
+        self.assertTrue(all(r['source_commit']=='9745eaebcf0ff74683f039dbde46613f141bc5f4'for r in rows))
+        self.assertTrue(all(datetime.fromisoformat(r['snapshot_generated_at_utc'])<datetime.fromisoformat(r['freeze_utc'].replace('Z','+00:00'))for r in rows))
+        self.assertEqual(sum(r['moneyline']['hit']for r in rows),3)
+        self.assertEqual(sum(r['spread']['hit']for r in rows),0)
+        self.assertEqual(sum(r['total']['hit']for r in rows),1)
 
     def test_accuracy_recomputes_exactly_from_rows(self):
         a=self.audit
