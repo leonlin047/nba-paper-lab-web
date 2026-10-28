@@ -48,10 +48,11 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .candidate-cache
-          key: ${{ runner.os }}-cpu-gbdt-v1-${{ hashFiles('scripts/gbdt_candidate.py', 'scripts/factor_scorecard.py', 'scripts/score_model.py', 'scripts/analyst_factors.py', 'scripts/requirements-candidate.txt', 'data/history_games.json') }}-${{ steps.clock.outputs.week }}
+          key: ${{ runner.os }}-cpu-gbdt-v1-${{ hashFiles('scripts/gbdt_candidate.py', 'scripts/factor_scorecard.py', 'scripts/score_model.py', 'scripts/analyst_factors.py', 'scripts/requirements-candidate.txt') }}-${{ steps.clock.outputs.week }}
           restore-keys: |
-            ${{ runner.os }}-cpu-gbdt-v1-${{ hashFiles('scripts/gbdt_candidate.py', 'scripts/factor_scorecard.py', 'scripts/score_model.py', 'scripts/analyst_factors.py', 'scripts/requirements-candidate.txt', 'data/history_games.json') }}-${{ steps.clock.outputs.week }}
-            ${{ runner.os }}-cpu-gbdt-v1-${{ hashFiles('scripts/gbdt_candidate.py', 'scripts/factor_scorecard.py', 'scripts/score_model.py', 'scripts/analyst_factors.py', 'scripts/requirements-candidate.txt', 'data/history_games.json') }}-
+            ${{ runner.os }}-cpu-gbdt-v1-${{ hashFiles('scripts/gbdt_candidate.py', 'scripts/factor_scorecard.py', 'scripts/score_model.py', 'scripts/analyst_factors.py', 'scripts/requirements-candidate.txt') }}-${{ steps.clock.outputs.week }}
+            ${{ runner.os }}-cpu-gbdt-v1-${{ hashFiles('scripts/gbdt_candidate.py', 'scripts/factor_scorecard.py', 'scripts/score_model.py', 'scripts/analyst_factors.py', 'scripts/requirements-candidate.txt') }}-
+            ${{ runner.os }}-cpu-gbdt-v1-
       - name: Fetch attributable news headlines (not X posts)
         run: python3 scripts/collect_news.py
       - name: Refresh prior-season PBP Stats efficiency (24h cache)
