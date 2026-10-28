@@ -40,6 +40,8 @@ jobs:
         run: python3 scripts/collect_pbp_prior.py
       - name: Fetch game details and pregame baseline
         run: python3 scripts/collect_games.py
+      - name: Accumulate point-in-time lineups and technical matchup observations
+        run: python3 scripts/context_factors.py --backfill
       - name: Refresh cached integer scorecard and immutable pregame ledger
         run: python3 scripts/factor_scorecard.py
       - name: Probe public Taiwan odds source availability
@@ -62,7 +64,7 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          snapshots=(games.json research.json playsport_status.json injuries.json reports.json news.json box_factors.json analyst_validation.json season_priors.json core-odds-status.json factor-model-cache.json factor-scorecard.json factor-pregame-ledger.json)
+          snapshots=(games.json research.json playsport_status.json injuries.json reports.json news.json box_factors.json analyst_validation.json season_priors.json core-odds-status.json factor-model-cache.json factor-scorecard.json factor-pregame-ledger.json context-history.json context-injury-history.json context-factors.json context-pregame-ledger.json)
           tmpdir="$(mktemp -d)"
           for file in "${snapshots[@]}"; do
             cp "data/$file" "$tmpdir/$file"
@@ -79,7 +81,7 @@ jobs:
             for file in "${snapshots[@]}"; do
               cp "$tmpdir/$file" "data/$file"
             done
-            git add data/games.json data/research.json data/playsport_status.json data/injuries.json data/reports.json data/news.json data/box_factors.json data/analyst_validation.json data/season_priors.json data/core-odds-status.json data/factor-model-cache.json data/factor-scorecard.json data/factor-pregame-ledger.json
+            git add data/games.json data/research.json data/playsport_status.json data/injuries.json data/reports.json data/news.json data/box_factors.json data/analyst_validation.json data/season_priors.json data/core-odds-status.json data/factor-model-cache.json data/factor-scorecard.json data/factor-pregame-ledger.json data/context-history.json data/context-injury-history.json data/context-factors.json data/context-pregame-ledger.json
             if git diff --cached --quiet; then
               echo "No snapshot changes."
               exit 0

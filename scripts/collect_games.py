@@ -10,9 +10,12 @@ from elo_history import train_and_forecast
 from analyst_factors import extract_four_factors
 from score_model import evaluate_and_project,market_probabilities
 from core_odds import supplement
+from context_factors import read as read_context_json,cached_final_detail
 UTC=dt.timezone.utc
 ROOT=pathlib.Path("data")
 ROOT.mkdir(exist_ok=True)
+previous_public=read_context_json(ROOT/"games.json",{})
+previous_boxes=read_context_json(ROOT/"box_factors.json",{})
 HEAD={"User-Agent":"NBA-Paper-Lab-research/1.0 (public-data research)","Accept":"application/json"}
 BASE="https://site.api.espn.com/apis/site/v2/sports/basketball/nba/"
 def fetch(endpoint,params=None):
@@ -236,6 +239,9 @@ details=[]
 box_samples=[]
 for g in finals[-45:]:
     try:
+        cached=cached_final_detail(previous_public,previous_boxes,g,dt.datetime.now(UTC))
+        if cached:
+            details.append(cached["detail"]);box_samples.extend(cached["teams"]);continue
         d=fetch("summary",{"event":g["id"]})
         sample_time=dt.datetime.now(UTC).isoformat()
         for fact in extract_four_factors(d,g["id"],sample_time):
@@ -248,13 +254,13 @@ for g in finals[-45:]:
                 labels=group.get("labels",[])
                 for athlete in group.get("athletes",[]):
                     player=athlete.get("athlete",{})
-                    players.append({"name":player.get("displayName"),"stats":dict(zip(labels,athlete.get("stats",[])))})
+                    players.append({"name":player.get("displayName"),"athlete_id":str(player["id"]) if player.get("id") else None,"position":(player.get("position") or {}).get("abbreviation"),"stats":dict(zip(labels,athlete.get("stats",[])))})
             box.append({"team":t.get("team",{}).get("abbreviation"),"players":players})
         lines=[]
         for c in d.get("header",{}).get("competitions",[]):
             for team in c.get("competitors",[]):
                 lines.append({"team":team.get("team",{}).get("abbreviation"),"quarters":[x.get("value") for x in team.get("linescores",[])]})
-        details.append({"event_id":g["id"],"boxscore":box,"quarter_scores":lines})
+        details.append({"event_id":g["id"],"captured_at_utc":sample_time,"boxscore":box,"quarter_scores":lines})
     except Exception as exc:errors.append("summary "+g["id"]+": "+str(exc)[:80])
 now=dt.datetime.now(UTC).isoformat()
 (ROOT/"box_factors.json").write_text(json.dumps({
@@ -292,7 +298,7 @@ try:
             injury_snapshot["injuries"].append({
                 "team":team_code,
                 "team_name":(athlete_team.get("displayName") if isinstance(athlete_team,dict) else None) or group.get("displayName"),
-                "player":name,"status":st or "未公布",
+                "player":name,"athlete_id":str(athlete["id"]) if athlete.get("id") else None,"status":st or "未公布",
                 "type":details.get("type"),"detail":details.get("detail"),
                 "date":rec.get("date"),"return_date":details.get("returnDate")})
 except Exception as exc:
