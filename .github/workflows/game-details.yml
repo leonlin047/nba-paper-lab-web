@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'scripts/*.py'
+      - 'scripts/requirements-candidate.txt'
       - 'tests/*.py'
       - 'data/history_games.json'
       - 'research-dashboard.js'
@@ -32,8 +33,22 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
       - name: Install public NBA HTML parser for offline fixture tests
-        run: python3 -m pip install --disable-pip-version-check 'beautifulsoup4>=4.12,<5'
+        run: python3 -m pip install --disable-pip-version-check 'beautifulsoup4>=4.12,<5' -r scripts/requirements-candidate.txt
+      - name: Determine Taipei training week
+        id: clock
+        run: echo "week=$(TZ=Asia/Taipei date +'%G-W%V')" >> "$GITHUB_OUTPUT"
+      - name: Restore CPU candidate models and calibration
+        uses: actions/cache@v4
+        with:
+          path: .candidate-cache
+          key: ${{ runner.os }}-cpu-gbdt-v1-${{ hashFiles('scripts/gbdt_candidate.py', 'scripts/factor_scorecard.py', 'scripts/score_model.py', 'scripts/analyst_factors.py', 'scripts/requirements-candidate.txt', 'data/history_games.json') }}-${{ steps.clock.outputs.week }}
+          restore-keys: |
+            ${{ runner.os }}-cpu-gbdt-v1-${{ hashFiles('scripts/gbdt_candidate.py', 'scripts/factor_scorecard.py', 'scripts/score_model.py', 'scripts/analyst_factors.py', 'scripts/requirements-candidate.txt', 'data/history_games.json') }}-${{ steps.clock.outputs.week }}
+            ${{ runner.os }}-cpu-gbdt-v1-${{ hashFiles('scripts/gbdt_candidate.py', 'scripts/factor_scorecard.py', 'scripts/score_model.py', 'scripts/analyst_factors.py', 'scripts/requirements-candidate.txt', 'data/history_games.json') }}-
       - name: Fetch attributable news headlines (not X posts)
         run: python3 scripts/collect_news.py
       - name: Refresh prior-season PBP Stats efficiency (24h cache)
@@ -44,6 +59,8 @@ jobs:
         run: python3 scripts/context_factors.py --backfill
       - name: Refresh cached integer scorecard and immutable pregame ledger
         run: python3 scripts/factor_scorecard.py
+      - name: Refresh CPU challenger and genuine first-publication ledger
+        run: python3 scripts/gbdt_candidate.py
       - name: Probe public Taiwan odds source availability
         run: python3 scripts/playsport_probe.py
       - name: Validate datasets and UI syntax
@@ -64,7 +81,7 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          snapshots=(games.json research.json playsport_status.json injuries.json reports.json news.json box_factors.json analyst_validation.json season_priors.json core-odds-status.json factor-model-cache.json factor-scorecard.json factor-pregame-ledger.json context-history.json context-injury-history.json context-factors.json context-pregame-ledger.json)
+          snapshots=(games.json research.json playsport_status.json injuries.json reports.json news.json box_factors.json analyst_validation.json season_priors.json core-odds-status.json factor-model-cache.json factor-scorecard.json factor-pregame-ledger.json context-history.json context-injury-history.json context-factors.json context-pregame-ledger.json gbdt-candidate.json gbdt-pregame-ledger.json gbdt-result-history.json)
           tmpdir="$(mktemp -d)"
           for file in "${snapshots[@]}"; do
             cp "data/$file" "$tmpdir/$file"
@@ -72,7 +89,7 @@ jobs:
           for attempt in 1 2 3; do
             git fetch origin main
             # Do not publish an older model's results after its source changes.
-            changed="$(git diff --name-only HEAD origin/main -- scripts/ tests/ research-dashboard.js game-details.js injuries.js news.js localization.js index.html team-analytics.js audit-dashboard.js apex-dashboard.js data/pregame-audit.json data/apex-v21-status.json .github/workflows/game-details.yml)"
+            changed="$(git diff --name-only HEAD origin/main -- scripts/ tests/ platform.js platform.css research-dashboard.js game-details.js injuries.js news.js localization.js index.html team-analytics.js audit-dashboard.js apex-dashboard.js data/pregame-audit.json data/apex-v21-status.json .github/workflows/game-details.yml)"
             if [ -n "$changed" ]; then
               echo "Source changed while analyzing; skip stale publish (newer run will regenerate)."
               exit 0
@@ -81,7 +98,7 @@ jobs:
             for file in "${snapshots[@]}"; do
               cp "$tmpdir/$file" "data/$file"
             done
-            git add data/games.json data/research.json data/playsport_status.json data/injuries.json data/reports.json data/news.json data/box_factors.json data/analyst_validation.json data/season_priors.json data/core-odds-status.json data/factor-model-cache.json data/factor-scorecard.json data/factor-pregame-ledger.json data/context-history.json data/context-injury-history.json data/context-factors.json data/context-pregame-ledger.json
+            git add data/gbdt-result-history.json data/gbdt-candidate.json data/gbdt-pregame-ledger.json data/games.json data/research.json data/playsport_status.json data/injuries.json data/reports.json data/news.json data/box_factors.json data/analyst_validation.json data/season_priors.json data/core-odds-status.json data/factor-model-cache.json data/factor-scorecard.json data/factor-pregame-ledger.json data/context-history.json data/context-injury-history.json data/context-factors.json data/context-pregame-ledger.json
             if git diff --cached --quiet; then
               echo "No snapshot changes."
               exit 0

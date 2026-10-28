@@ -13,6 +13,8 @@ on:
       - "data/pregame-audit.json"
       - "data/apex-v21-status.json"
       - "scripts/*.py"
+      - "scripts/requirements-candidate.txt"
+      - ".github/workflows/game-details.yml"
       - "tests/*.py"
       - ".github/workflows/web-pr-checks.yml"
   workflow_dispatch:
@@ -26,8 +28,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
       - name: Install offline-test HTML parser
-        run: python3 -m pip install --disable-pip-version-check 'beautifulsoup4>=4.12,<5'
+        run: python3 -m pip install --disable-pip-version-check 'beautifulsoup4>=4.12,<5' -r scripts/requirements-candidate.txt
       - name: Check JavaScript syntax
         run: |
           node --check team-analytics.js

@@ -35,7 +35,7 @@ class PlatformTests(unittest.TestCase):
         # Execute the actual helper functions used by the browser.
         script = r'''
 const assert = require('node:assert/strict');
-const {day,numeric,validBefore,tally,playerForms,scheduleDate,pregameReport} = require('./platform.js');
+const {day,numeric,validBefore,tally,playerForms,scheduleDate,pregameReport,prospectiveTally} = require('./platform.js');
 assert.equal(day('2026-10-26T23:30Z'), '2026-10-27');
 assert.equal(numeric(null), null); assert.equal(numeric(''), null); assert.equal(numeric(0), 0);
 assert.equal(validBefore('2026-10-27T12:00Z','2026-10-27T12:00Z'),false);
@@ -60,6 +60,10 @@ const report={event_id:'next',home:'NYK',away:'DET',generated_at_utc:'2026-10-27
 assert.equal(pregameReport(future,report,'elo',now),report.report_zh);
 assert.equal(pregameReport(future,report,'apex',now),null);
 assert.equal(pregameReport(future,report,'factor',now),null);
+assert.equal(pregameReport(future,report,'gbdt',now),null);
+assert.equal(pregameReport(future,{...report,gbdt_forecast:true},'gbdt',now),report.report_zh);
+assert.deepEqual(prospectiveTally([{settlement:null},{settlement:{spread:{push:true,hit:null}}},{settlement:{spread:{push:false,hit:true}}}],'spread'),{n:1,correct:1,push:1});
+assert.deepEqual(prospectiveTally([{settlement:{moneyline_hit:false}},{settlement:null}],'moneyline'),{n:1,correct:0,push:0});
 assert.equal(pregameReport(future,{...report,factor_forecast:true},'factor',now),report.report_zh);
 assert.equal(pregameReport({...future,status:'post'},report,'elo',now),null);
 assert.equal(pregameReport(future,{...report,generated_at_utc:future.date},'elo',now),null);
