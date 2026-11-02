@@ -19,6 +19,7 @@ import sys
 
 from analyst_factors import canon, when, valid_final
 from score_model import sample_model
+from result_ledger import choose_quote
 
 UTC=timezone.utc
 TW=timezone(timedelta(hours=8))
@@ -276,12 +277,12 @@ def run(root,now=None):
         if not observed or observed>now or not tip or observed>=tip:continue
         key=str(m.get("event_id"));quality=sum((m.get("spread") or {}).get("home_line") is not None for _ in [0])+int((m.get("total") or {}).get("line") is not None)
         if key not in markets or quality>markets[key][0]:markets[key]=(quality,m)
-    forecasts=[forecast(r,fit,markets.get(r["event_id"],(0,None))[1],now,version) for r in rows if r["y"] is None]
+    forecasts=[forecast(r,fit,choose_quote(public.get("market_snapshots",[]),r,now),now,version) for r in rows if r["y"] is None]
     ledger=json_read(root/"factor-pregame-ledger.json",{"schema_version":1,"records":[]});existing={(r["event_id"],r["model_version"]):r for r in ledger["records"]}
     added=0
     for f in forecasts:
         key=(f["event_id"],version)
-        if key not in existing and when(f["date"])-now>=timedelta(minutes=60):existing[key]={**f,"frozen_at_utc":now.isoformat(),"settlement":None};added+=1
+        if not any(k[0]==f["event_id"]for k in existing) and timedelta(hours=1)<=when(f["date"])-now<=timedelta(hours=24):existing[key]={**f,"frozen_at_utc":now.isoformat(),"settlement":None};added+=1
     finals={str(g["id"]):g for g in current if g.get("status")=="post" and valid_final(g,now)}
     for record in existing.values():
         g=finals.get(record["event_id"])

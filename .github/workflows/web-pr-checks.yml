@@ -15,6 +15,9 @@ on:
       - "scripts/*.py"
       - "scripts/requirements-candidate.txt"
       - ".github/workflows/game-details.yml"
+      - ".github/workflows/scoreboard.yml"
+      - "scripts/*.sh"
+      - "data/private-model-readiness.json"
       - "tests/*.py"
       - ".github/workflows/web-pr-checks.yml"
   workflow_dispatch:
@@ -42,5 +45,7 @@ jobs:
           node --check research-dashboard.js
           node --check game-details.js
           node --check injuries.js
+      - name: Check isolated publisher shell syntax
+        run: bash -n scripts/publish_snapshots.sh
       - name: Run all offline Python tests
         run: python3 -m unittest discover -s tests -v
