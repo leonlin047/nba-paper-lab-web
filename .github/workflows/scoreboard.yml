@@ -1,70 +1,41 @@
 name: Refresh NBA scoreboard
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/collect_scoreboard.py'
+      - 'scripts/result_ledger.py'
+      - 'scripts/publish_snapshots.sh'
+      - '.github/workflows/scoreboard.yml'
   schedule:
-    - cron: '13 * * * *'
+    - cron: '*/15 0-6,20-23 * * *'
+    - cron: '13 7-19 * * *'
 permissions:
   contents: write
+concurrency:
+  group: nba-details-refresh
+  cancel-in-progress: false
 jobs:
   refresh:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
-      - name: Collect NBA or ESPN scoreboard
-        run: |
-          mkdir -p data
-          python3 - <<'PY'
-          import datetime,json,pathlib,urllib.request,urllib.error
-          dest=pathlib.Path("data/scoreboard.json")
-          headers={"User-Agent":"nba-paper-lab-research/1.0","Accept":"application/json"}
-          def get(url):
-              with urllib.request.urlopen(urllib.request.Request(url,headers=headers),timeout=20) as response:
-                  body=response.read(2_000_001)
-              if len(body)>2_000_000:raise ValueError("response too large")
-              return json.loads(body)
-          errors=[]
-          games=None
-          source=None
-          try:
-              raw=get("https://cdn.nba.com/static/json/liveData/scoreboard/todaysScoreboard_00.json")
-              games=[]
-              for g in raw["scoreboard"]["games"]:
-                  status=int(g["gameStatus"])
-                  games.append({"home":g["homeTeam"]["teamTricode"],"away":g["awayTeam"]["teamTricode"],"status":{1:"未開賽",2:"進行中",3:"已結束"}.get(status,"未知"),"home_score":g["homeTeam"].get("score") if status in (2,3) else None,"away_score":g["awayTeam"].get("score") if status in (2,3) else None})
-              source="NBA scoreboard CDN"
-          except (urllib.error.URLError,ValueError,KeyError,TypeError) as e:
-              errors.append("NBA "+type(e).__name__+": "+str(e)[:100])
-          if games is None:
-              try:
-                  raw=get("https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard")
-                  games=[]
-                  for event in raw["events"]:
-                      competition=event["competitions"][0]
-                      sides={x["homeAway"]:x for x in competition["competitors"]}
-                      home,away=sides["home"],sides["away"]
-                      state=event["status"]["type"]["state"]
-                      games.append({"home":home["team"]["abbreviation"],"away":away["team"]["abbreviation"],"status":{"pre":"未開賽","in":"進行中","post":"已結束"}.get(state,"未知"),"home_score":int(home["score"]) if state!="pre" and home.get("score") not in (None,"") else None,"away_score":int(away["score"]) if state!="pre" and away.get("score") not in (None,"") else None})
-                  source="ESPN scoreboard API"
-              except (urllib.error.URLError,ValueError,KeyError,TypeError,IndexError) as e:
-                  errors.append("ESPN "+type(e).__name__+": "+str(e)[:100])
-          if games is None:
-              print("Both scoreboard sources unavailable: "+" | ".join(errors))
-              if dest.exists():
-                  print("Preserving last successful snapshot")
-              else:
-                  print("No prior snapshot; frontend will show unavailable")
-          else:
-              snapshot={"captured_at":datetime.datetime.now(datetime.timezone.utc).isoformat(),"games":games,"source":source}
-              dest.write_text(json.dumps(snapshot,ensure_ascii=False,separators=(",",":"))+"\n",encoding="utf-8")
-              print("Saved",len(games),"games from",source)
-          PY
-      - name: Commit changed snapshot
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/scoreboard.json
-          if ! git diff --cached --quiet; then
-            git commit -m "data: refresh NBA scoreboard snapshot"
-            git push
-          fi
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify lightweight result guards
+        run: python3 -m unittest discover -s tests -p 'test_result_ledger.py' -v
+      - name: Collect identified NBA or ESPN scoreboard
+        run: python3 scripts/collect_scoreboard.py
+      - name: Settle published forecasts without training or language-model calls
+        run: python3 scripts/result_ledger.py --settle-only
+      - name: Publish verified result snapshots
+        run: bash scripts/publish_snapshots.sh scoreboard.json games.json elo-pregame-ledger.json factor-pregame-ledger.json gbdt-pregame-ledger.json ensemble-pregame-ledger.json market-pregame-ledger.json settlement-status.json
+      - name: Request Pages deployment after result refresh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X POST "repos/${{ github.repository }}/dispatches" -f event_type=refresh-pages || true

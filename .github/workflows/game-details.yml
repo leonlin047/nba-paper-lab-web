@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'scripts/*.py'
+      - 'scripts/publish_snapshots.sh'
       - 'scripts/requirements-candidate.txt'
       - 'tests/*.py'
       - 'data/history_games.json'
@@ -59,12 +60,20 @@ jobs:
         run: python3 scripts/collect_pbp_prior.py
       - name: Fetch game details and pregame baseline
         run: python3 scripts/collect_games.py
+      - name: Reconcile identified final scores before model features
+        run: |
+          python3 scripts/collect_scoreboard.py
+          python3 scripts/result_ledger.py --settle-only
       - name: Accumulate point-in-time lineups and technical matchup observations
         run: python3 scripts/context_factors.py --backfill
       - name: Refresh cached integer scorecard and immutable pregame ledger
         run: python3 scripts/factor_scorecard.py
       - name: Refresh CPU challenger and genuine first-publication ledger
         run: python3 scripts/gbdt_candidate.py
+      - name: Calibrate and validate available-model fusion
+        run: python3 scripts/model_hub.py
+      - name: Freeze each score market on first valid quote and settle all model families
+        run: python3 scripts/result_ledger.py
       - name: Probe public Taiwan odds source availability
         run: python3 scripts/playsport_probe.py
       - name: Validate datasets and UI syntax
@@ -80,42 +89,8 @@ jobs:
           node --check team-analytics.js
           node --check audit-dashboard.js
           node --check apex-dashboard.js
-      - name: Commit verified snapshots without stale rebase conflicts
-        run: |
-          set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          snapshots=(games.json research.json playsport_status.json injuries.json reports.json news.json box_factors.json analyst_validation.json season_priors.json core-odds-status.json factor-model-cache.json factor-scorecard.json factor-pregame-ledger.json context-history.json context-injury-history.json context-factors.json context-pregame-ledger.json gbdt-candidate.json gbdt-pregame-ledger.json gbdt-result-history.json)
-          tmpdir="$(mktemp -d)"
-          for file in "${snapshots[@]}"; do
-            cp "data/$file" "$tmpdir/$file"
-          done
-          for attempt in 1 2 3; do
-            git fetch origin main
-            # Do not publish an older model's results after its source changes.
-            changed="$(git diff --name-only HEAD origin/main -- scripts/ tests/ platform.js platform.css research-dashboard.js game-details.js injuries.js news.js localization.js index.html team-analytics.js audit-dashboard.js apex-dashboard.js data/pregame-audit.json data/apex-v21-status.json .github/workflows/game-details.yml)"
-            if [ -n "$changed" ]; then
-              echo "Source changed while analyzing; skip stale publish (newer run will regenerate)."
-              exit 0
-            fi
-            git reset --hard origin/main
-            for file in "${snapshots[@]}"; do
-              cp "$tmpdir/$file" "data/$file"
-            done
-            git add data/gbdt-result-history.json data/gbdt-candidate.json data/gbdt-pregame-ledger.json data/games.json data/research.json data/playsport_status.json data/injuries.json data/reports.json data/news.json data/box_factors.json data/analyst_validation.json data/season_priors.json data/core-odds-status.json data/factor-model-cache.json data/factor-scorecard.json data/factor-pregame-ledger.json data/context-history.json data/context-injury-history.json data/context-factors.json data/context-pregame-ledger.json
-            if git diff --cached --quiet; then
-              echo "No snapshot changes."
-              exit 0
-            fi
-            git commit -m "data: refresh source-backed NBA analysis snapshots"
-            if git push; then
-              echo "Snapshot publish succeeded."
-              exit 0
-            fi
-            sleep "$attempt"
-          done
-          echo "Unable to publish after three conflict-safe attempts." >&2
-          exit 1
+      - name: Publish verified snapshots from an isolated worktree
+        run: bash scripts/publish_snapshots.sh games.json scoreboard.json research.json playsport_status.json injuries.json reports.json news.json box_factors.json analyst_validation.json season_priors.json core-odds-status.json factor-model-cache.json factor-scorecard.json factor-pregame-ledger.json context-history.json context-injury-history.json context-factors.json context-pregame-ledger.json gbdt-candidate.json gbdt-pregame-ledger.json gbdt-result-history.json model-hub.json elo-forecasts.json elo-pregame-ledger.json ensemble-pregame-ledger.json market-pregame-ledger.json settlement-status.json
       - name: Request Pages deployment after data refresh
         if: success()
         env:

@@ -35,7 +35,7 @@ class PlatformTests(unittest.TestCase):
         # Execute the actual helper functions used by the browser.
         script = r'''
 const assert = require('node:assert/strict');
-const {day,numeric,validBefore,tally,playerForms,scheduleDate,pregameReport,prospectiveTally} = require('./platform.js');
+const {day,numeric,validBefore,tally,playerForms,scheduleDate,pregameReport,prospectiveTally,joinMarketRecords} = require('./platform.js');
 assert.equal(day('2026-10-26T23:30Z'), '2026-10-27');
 assert.equal(numeric(null), null); assert.equal(numeric(''), null); assert.equal(numeric(0), 0);
 assert.equal(validBefore('2026-10-27T12:00Z','2026-10-27T12:00Z'),false);
@@ -62,6 +62,13 @@ assert.equal(pregameReport(future,report,'apex',now),null);
 assert.equal(pregameReport(future,report,'factor',now),null);
 assert.equal(pregameReport(future,report,'gbdt',now),null);
 assert.equal(pregameReport(future,{...report,gbdt_forecast:true},'gbdt',now),report.report_zh);
+assert.equal(pregameReport(future,report,'ensemble',now),null);
+assert.equal(pregameReport(future,{...report,ensemble_forecast:true},'ensemble',now),report.report_zh);
+const old={event_id:'x',date:'2026-11-03T00:00Z',home:'GS',away:'LAC',frozen_at_utc:'2026-11-02T00:00Z',market:{home_line:null},cover:null,settlement:{moneyline_hit:true,spread:null}};
+const newer={...old,model_family:'gbdt',market_kind:'spread',frozen_at_utc:'2026-11-02T10:00Z',market:{home_line:-3.5},cover:{positive:.6,negative:.4},settlement:{spread:{hit:true,push:false}}};
+const view=joinMarketRecords([old],[newer],'gbdt');assert.equal(view[0].market.home_line,-3.5);assert.equal(view[0].settlement.spread.hit,true);assert.equal(old.cover,null);assert.equal(old.settlement.spread,null);
+assert.equal(joinMarketRecords([old],[{...newer,home:'BOS'}],'gbdt')[0].cover,null);
+
 assert.deepEqual(prospectiveTally([{settlement:null},{settlement:{spread:{push:true,hit:null}}},{settlement:{spread:{push:false,hit:true}}}],'spread'),{n:1,correct:1,push:1});
 assert.deepEqual(prospectiveTally([{settlement:{moneyline_hit:false}},{settlement:null}],'moneyline'),{n:1,correct:0,push:0});
 assert.equal(pregameReport(future,{...report,factor_forecast:true},'factor',now),report.report_zh);
